@@ -90,6 +90,7 @@ src/
   backdrop.ts        sky, parallax hills and the road, in day and dusk palettes
   controls.ts        keyboard, mouse and gamepad input
   touch.ts           on-screen touch buttons
+  effects.ts         spark bursts, shockwave rings, glows, screen shake
   sfx.ts             procedural sound effects
   scenes/            title screen, patrol and HUD
 assets/sprites/      the game's 16 × 16 sprites

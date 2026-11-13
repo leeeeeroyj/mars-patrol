@@ -40,8 +40,11 @@ The game camera doesn't scroll. The scene keeps `camX` (distance driven) and pla
 - **Done (7, publishing):** README with a staged hero screenshot (`docs/screenshot.png`), MIT licence, sprite dataset credit. Repo settings per playbook C5 applied and verified.
 - **Verified:** headless CDP suite, 16/16 checks: crater crash and jump, boulder kill, shell cancelling, dozer jump and kill, REAR lamp, satellite shot down, saucer craters, sector bonus maths, route bonus and Dusk lap, game over and continue, no exceptions. A touch run on an emulated 844×390 phone covered boost, fire and jump.
 - **Design change:** the relay satellite now glides in, hangs over the rover (flashing), then plunges. An arc aimed at the rover could only be shot once it was already on top of it.
+- **Milestone 5 done, not yet committed:** `src/effects.ts` (tunables in `FX` in `config.ts`). Additive spark bursts with shockwave rings (two for big kills), sized small / big / huge per the juice table; sparks spray back from a big boulder's first hit; pops for cancelled shots, ice cores and beacons; the rover's death adds a white flash and a camera roll; a ring closes in on the rover at respawn and continue. Soft additive glows under shots, shells, falling drops, ice cores, beacon lights and fresh craters. No full-screen bloom.
+  - **Verified** in headless Chrome (CDP): screenshots mid-burst for each effect; 40 fps with a burst every 150 ms, the same as idle, at real-time game speed; roll and shake settle to zero; game over and continue still work; no exceptions.
+  - **Design change:** the camera zooms in slightly while it rolls or shakes. Without that, the death roll showed black wedges past the road's ends at the screen corners.
 - **Decided in code:** each Dusk lap is laid out from a new seed (the seed includes the lap), and a retry within a lap repeats its layout.
-- **Next:** milestone 5's remaining juice (shockwave rings, bloom-free glow) and its frame-time check; a real phone test (6); a balance pass (7). Check that GitHub detects the licence as MIT after the next push. Confirm two-factor login on the account.
+- **Next:** a real phone test (6), including the effects' frame rate; a balance pass (7); retake the README screenshot with the new effects. Check that GitHub detects the licence as MIT after the next push. Confirm two-factor login on the account.
 
 ## Milestones
 

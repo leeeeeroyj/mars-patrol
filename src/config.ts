@@ -111,6 +111,22 @@ export const DUSK_SPEEDUP = 0.25;
 /** Registry key the game writes its HUD state to each frame; the HUD scene reads it. */
 export const HUD_STATE = 'hudState';
 
+/**
+ * Juice (src/effects.ts). Bursts: neon sparks (count, speed in design px/s, life in ms), a shockwave ring (radius),
+ * and shake in game pixels. `glow` is a soft additive halo drawn under bright things; there's no full-screen bloom.
+ */
+export const FX = {
+  bursts: {
+    small: { sparks: 18, speed: 130, life: 420, ring: 12, shake: 0.8 },
+    big: { sparks: 40, speed: 180, life: 600, ring: 22, shake: 1.8 },
+    huge: { sparks: 90, speed: 230, life: 850, ring: 36, shake: 3.2 },
+  },
+  /** Rover death: a white flash at this alpha, and a camera roll in radians. */
+  deathFlash: 0.4,
+  deathRoll: 0.025,
+  glow: { enabled: true, alpha: 0.3 },
+};
+
 /** Debris colours per thing that blows up. */
 export const DEBRIS = {
   rover: [COLORS.rust, COLORS.gold, COLORS.ink, 0x7a3a22],

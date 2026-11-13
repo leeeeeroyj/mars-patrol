@@ -5,6 +5,7 @@ import {
 } from '../config';
 import { Backdrop } from '../backdrop';
 import { Controls, type ControlState } from '../controls';
+import { Effects } from '../effects';
 import { generateSector, rng, type CourseItem, type SectorCourse } from '../course';
 import { playSound, toggleMute } from '../sfx';
 import { touchButtons } from '../touch';
@@ -50,6 +51,7 @@ export class PatrolScene extends Phaser.Scene {
   private dyn!: Phaser.GameObjects.Graphics;
   private rover!: Phaser.GameObjects.Image;
   private debris!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private fx!: Effects;
   private palette = DEBRIS.dust as number[];
 
   // Run state, all reset in create() (scene.restart reuses this instance).
@@ -78,10 +80,6 @@ export class PatrolScene extends Phaser.Scene {
   private overAt = 0;
   private banner: Banner = { id: 0, title: '', sub: '', ms: 0 };
   private lampWas = { air: false, mine: false, rear: false };
-  /** Seconds of camera shake left. */
-  private shake = 0;
-  /** The camera's resting scroll; shake jiggles around it. */
-  private rest = { x: 0, y: 0 };
 
   private ground: GroundThing[] = [];
   private air: AirThing[] = [];
@@ -105,8 +103,6 @@ export class PatrolScene extends Phaser.Scene {
       ground: [], air: [], craters: [], shots: [], ups: [], shells: [], drops: [], popups: [],
     });
     fitCamera(this, RENDER_SCALE);
-    this.rest = { x: this.cameras.main.scrollX, y: this.cameras.main.scrollY };
-    this.shake = 0;
     this.scene.launch('hud');
     if (!this.textures.exists(PX)) {
       const g = this.make.graphics({}, false);
@@ -116,6 +112,7 @@ export class PatrolScene extends Phaser.Scene {
     }
     this.backdrop = new Backdrop(this, 0);
     this.dyn = this.add.graphics().setDepth(2);
+    this.fx = new Effects(this);
     this.rover = this.sprite('player', 0, 0).setDepth(10);
     this.debris = this.add.particles(0, 0, PX, {
       emitting: false,
@@ -141,7 +138,6 @@ export class PatrolScene extends Phaser.Scene {
     const dt = Math.min(0.05, delta / 1000);
     const input = this.controls.read();
     if (input.mute) toggleMute(this);
-    this.shake = Math.max(0, this.shake - dt);
     if (this.over) {
       if (this.time.now - this.overAt > 800) {
         if (input.confirm) this.continueRun();
@@ -149,6 +145,7 @@ export class PatrolScene extends Phaser.Scene {
       }
     } else this.step(dt, input);
     this.draw();
+    this.fx.update(this.camX, dt);
     this.writeHud(input);
   }
 
@@ -322,6 +319,7 @@ export class PatrolScene extends Phaser.Scene {
         if (crossed) {
           sh.dead = s.dead = true;
           this.burst(s.x, s.y, [COLORS.tech, COLORS.shot], 6);
+          this.fx.pop(s.x, s.y, [COLORS.tech, COLORS.shot], 6);
           playSound(this, 'cancel');
         }
       }
@@ -332,7 +330,10 @@ export class PatrolScene extends Phaser.Scene {
           g.hp -= 1;
           g.flash = 0.12;
           if (g.hp <= 0) this.destroyGround(g);
-          else playSound(this, 'cancel');
+          else {
+            this.fx.hit(g.x - 8, s.y, COLORS.rust, 0);
+            playSound(this, 'cancel');
+          }
         }
       }
     }
@@ -349,6 +350,7 @@ export class PatrolScene extends Phaser.Scene {
     g.dead = true;
     const rock = g.kind === 'boulder';
     this.burst(g.x, GROUND_Y - 8, rock ? DEBRIS.rock : DEBRIS.machine, rock ? 16 : 22);
+    this.fx.burst(g.x, GROUND_Y - 8, rock ? DEBRIS.rock : DEBRIS.machine, rock && !g.big ? 'small' : 'big');
     const points = rock ? (g.big ? POINTS.boulder.bigKill : POINTS.boulder.kill) : g.kind === 'harvester' ? POINTS.harvester.kill : POINTS.dozer.kill;
     this.addScore(points, g.x, GROUND_Y - 24);
     playSound(this, 'boom');
@@ -398,6 +400,7 @@ export class PatrolScene extends Phaser.Scene {
           if (a.y >= GROUND_Y - 6) {
             a.dead = true;
             this.burst(this.camX + a.x, GROUND_Y - 4, DEBRIS.air, 14);
+            this.fx.burst(this.camX + a.x, GROUND_Y - 4, DEBRIS.air, 'small');
             playSound(this, 'boom');
           }
         }
@@ -407,6 +410,7 @@ export class PatrolScene extends Phaser.Scene {
         if (Math.abs(up.sx - a.x) < 9 && up.py >= a.y - 9 && up.y <= a.y + 9) {
           up.dead = a.dead = true;
           this.burst(this.camX + a.x, a.y, DEBRIS.air, 18);
+          this.fx.burst(this.camX + a.x, a.y, DEBRIS.air, a.kind === 'scout' ? 'small' : 'big');
           this.addScore(POINTS[a.kind], this.camX + a.x, a.y - 8);
           playSound(this, 'boom');
         }
@@ -432,6 +436,7 @@ export class PatrolScene extends Phaser.Scene {
         if (Math.abs(up.sx - d.sx) < 5 && up.y <= d.y + 4 && up.py >= py - 4) {
           up.dead = d.dead = true;
           this.burst(this.camX + d.sx, d.y, [COLORS.tech, COLORS.shot], 6);
+          this.fx.pop(this.camX + d.sx, d.y, [COLORS.tech, COLORS.shot], 6);
           playSound(this, 'cancel');
         }
       }
@@ -445,6 +450,7 @@ export class PatrolScene extends Phaser.Scene {
         if (d.kind === 'charge') {
           this.craters.push({ x: wx - ENEMY.chargeCrater / 2, w: ENEMY.chargeCrater, fresh: 0.6 });
           this.burst(wx, GROUND_Y - 2, DEBRIS.charge, 20);
+          this.fx.burst(wx, GROUND_Y - 2, DEBRIS.charge, 'small');
           playSound(this, 'crater');
         } else this.burst(wx, GROUND_Y - 2, [0xc88a62, COLORS.tech], 4);
       }
@@ -478,6 +484,7 @@ export class PatrolScene extends Phaser.Scene {
       if (g.kind === 'ice' && Math.abs(g.x - rx) < 12 && Math.abs(GROUND_Y - 36 - (GROUND_Y - 8 - y)) < 12) {
         g.dead = true;
         this.burst(g.x, GROUND_Y - 36, DEBRIS.ice, 14);
+        this.fx.pop(g.x, GROUND_Y - 36, DEBRIS.ice, 14);
         this.addScore(POINTS.ice, g.x, GROUND_Y - 50);
         playSound(this, 'pickup');
       }
@@ -503,7 +510,9 @@ export class PatrolScene extends Phaser.Scene {
     this.beaconsPassed += 1;
     this.respawnX = x;
     const sector = this.course.index, t = Math.floor(this.sectorTime);
-    if (this.beaconsPassed < COURSE.beaconsPerSector) {
+    const final = this.beaconsPassed === COURSE.beaconsPerSector;
+    this.fx.pop(x, GROUND_Y - 18, final ? [COLORS.tech, COLORS.gold] : [COLORS.tech], final ? 24 : 10);
+    if (!final) {
       playSound(this, 'beacon');
       this.showBanner(`BEACON ${sector + 1}-${this.beaconsPassed}`, `TIME ${fmt(t)}   PAR ${fmt(this.course.par)}`, 1800);
       return;
@@ -530,7 +539,7 @@ export class PatrolScene extends Phaser.Scene {
     this.deadFor = ROVER.respawnDelayMs / 1000;
     this.lives -= 1;
     this.burst(this.roverX(), GROUND_Y - 8 - this.roverY, DEBRIS.rover, 36);
-    this.shake = 0.35;
+    this.fx.death(this.roverX(), GROUND_Y - 8 - this.roverY, DEBRIS.rover);
     playSound(this, 'die');
   }
 
@@ -543,6 +552,7 @@ export class PatrolScene extends Phaser.Scene {
     this.camX = this.respawnX - 40;
     this.invulnerable = ROVER.invulnerableMs / 1000;
     this.airClock = Math.max(this.airClock, 3);
+    this.fx.implode(this.roverSX(), GROUND_Y - 8, COLORS.rust);
     const items = this.course.items;
     this.itemIdx = items.findIndex((it) => it.x >= this.camX - 40);
     if (this.itemIdx < 0) this.itemIdx = items.length;
@@ -584,6 +594,8 @@ export class PatrolScene extends Phaser.Scene {
     this.invulnerable = ROVER.invulnerableMs / 1000;
     this.airClock = 4;
     this.startSector(this.course.index, this.course.lap, this.course.startX);
+    this.fx.clear();
+    this.fx.implode(this.roverSX(), GROUND_Y - 8, COLORS.rust);
     playSound(this, 'start');
   }
 
@@ -647,10 +659,8 @@ export class PatrolScene extends Phaser.Scene {
   private draw() {
     const camX = this.camX;
     this.backdrop.update(camX, this.clock);
-    // Shake in game pixels (Phaser's own shake scales with canvas size and zoom, far too much at 4×).
-    const k = this.shake > 0 ? 2 : 0;
-    this.cameras.main.setScroll(this.rest.x + (Math.random() - 0.5) * k, this.rest.y + (Math.random() - 0.5) * k);
     this.debris.x = -camX;
+    this.fx.beginFrame();
 
     const g = this.dyn.clear();
     const p = this.backdrop.colors;
@@ -693,6 +703,17 @@ export class PatrolScene extends Phaser.Scene {
       // A diver flashes while it hangs, just before it plunges.
       if (a.kind === 'diver' && a.phase === 1 && Math.sin(this.clock * 30) > 0) a.img.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
       else a.img.clearTint().setTintMode(Phaser.TintModes.MULTIPLY);
+    }
+    // Soft halos under the bright things: shots, shells, falling drops, ice cores, beacon lights and fresh craters.
+    const fx = this.fx;
+    for (const s of this.shots) fx.glow(s.x - camX, s.y + 1, 7, COLORS.shot);
+    for (const u of this.ups) fx.glow(u.sx + 1, u.y + 2, 6, COLORS.shot);
+    for (const s of this.shells) fx.glow(s.x - camX, GROUND_Y - 5, 6, COLORS.tech);
+    for (const d of this.drops) fx.glow(d.sx, d.y, d.kind === 'charge' ? 9 : 5, d.kind === 'charge' ? COLORS.danger : COLORS.tech);
+    for (const c of this.craters) if (c.fresh > 0) fx.glow(c.x + c.w / 2 - camX, GROUND_Y + 2, c.w * 0.7, COLORS.rust, c.fresh / 0.6);
+    for (const t of this.ground) {
+      if (t.kind === 'ice') fx.glow(t.x - camX, t.img.y, 13, COLORS.tech, 0.75 + 0.25 * Math.sin(this.clock * 4 + t.x));
+      if (t.kind === 'beacon' && Math.sin(this.clock * 6) > 0) fx.glow(t.x - camX, GROUND_Y - 18, 8, COLORS.tech);
     }
     for (const pop of this.popups) pop.text.x = pop.x - camX;
 
