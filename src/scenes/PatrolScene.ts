@@ -30,7 +30,7 @@ type AirThing = {
   kind: 'scout' | 'bomber' | 'diver';
   x: number; y: number; t: number;
   img: Phaser.GameObjects.Image;
-  hx?: number; hy?: number; phase?: number; cool?: number; left?: number; vy?: number;
+  hx?: number; hy?: number; hoverX?: number; phase?: number; cool?: number; left?: number; vy?: number;
   dead?: boolean;
 };
 type Crater = { x: number; w: number; fresh: number };
@@ -198,7 +198,7 @@ export class PatrolScene extends Phaser.Scene {
   private spawnAir(kind: AirKind) {
     if (kind === 'scouts') {
       for (let i = 0; i < 3; i++) {
-        this.air.push({ kind: 'scout', x: 440 + i * 26, y: 80, t: 0, hx: 440 + i * 26, hy: 70 + i * 16, phase: i * 2.1, cool: 1 + i * 0.6, img: this.sprite('scout', -50, 0) });
+        this.air.push({ kind: 'scout', x: 440 + i * 26, y: 80, t: 0, hx: 440 + i * 26, hy: 70 + i * 16, hoverX: ENEMY.scout.hoverX[i], phase: i * 2.1, cool: 1 + i * 0.6, img: this.sprite('scout', -50, 0) });
       }
     } else if (kind === 'bomber') {
       this.air.push({ kind: 'bomber', x: 440, y: ENEMY.bomber.y, t: 0, cool: 1.4, left: ENEMY.bomber.charges, img: this.sprite('bomber', -50, 0) });
@@ -360,7 +360,7 @@ export class PatrolScene extends Phaser.Scene {
     for (const a of this.air) {
       a.t += dt;
       if (a.kind === 'scout') {
-        const goal = a.t < ENEMY.scout.life ? 300 - a.phase! * 30 : -120;
+        const goal = a.t < ENEMY.scout.life ? a.hoverX! : -120;
         a.hx! += (goal - a.hx!) * Math.min(1, dt * 0.8 * dusk);
         a.x = a.hx! + Math.sin(a.t * 1.3 * dusk + a.phase!) * ENEMY.scout.weave;
         a.y = a.hy! + Math.sin(a.t * 2.2 + a.phase!) * 12;

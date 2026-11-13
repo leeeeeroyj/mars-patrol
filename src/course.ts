@@ -43,7 +43,7 @@ function weighted<T extends string>(weights: Partial<Record<T, number>>, r: numb
 }
 
 /** How much road a hazard takes up, so the next one isn't placed on top of it. */
-const LENGTH: Record<GroundKind, number> = { crater: 34, boulder: 16, bigBoulder: 16, mine: 16, mineField: 36, harvester: 16, dozer: 0, ice: 0 };
+const LENGTH: Record<GroundKind, number> = { crater: 34, boulder: 16, bigBoulder: 16, mine: 16, mineField: COURSE.mineFieldGap + 16, harvester: 16, dozer: 0, ice: 0 };
 
 /**
  * Lays out one sector: five stretches of road, each ending at a beacon. Each stretch starts and ends with clear road,
@@ -62,7 +62,7 @@ export function generateSector(index: number, lap: number, startX: number): Sect
     while (x < segEnd - 140) {
       const kind = weighted(sector.ground, rand());
       if (kind === 'crater') items.push({ kind, x, w: 20 + Math.floor(rand() * 15) });
-      else if (kind === 'mineField') items.push({ kind: 'mine', x }, { kind: 'mine', x: x + 20 });
+      else if (kind === 'mineField') items.push({ kind: 'mine', x }, { kind: 'mine', x: x + COURSE.mineFieldGap });
       else items.push({ kind, x });
       const [lo, hi] = COURSE.gap;
       x += LENGTH[kind] + (lo + rand() * (hi - lo)) * scale;

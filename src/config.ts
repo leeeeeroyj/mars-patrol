@@ -61,7 +61,8 @@ export const POINTS = {
 export const SCORING = { sectorBonus: 1000, perSecondUnderPar: 100, routeBonus: 5000, extraRoversAt: [10000, 30000, 60000] };
 
 export const ENEMY = {
-  scout: { weave: 46, dropEvery: [1.6, 2.6] as const, life: 7 },
+  /** Each of the three hovers around its own screen x, weaving across the rover so its pellets and your shots can meet. */
+  scout: { hoverX: [150, 120, 90] as const, weave: 46, dropEvery: [1.6, 2.6] as const, life: 7 },
   bomber: { y: 52, ahead: 110, charges: 3, dropEvery: 1.9 },
   /** Glides in to hover over the rover, hangs (flashing), then plunges with this acceleration. */
   diver: { hoverY: 44, glide: 1.6, hang: 0.7, plunge: 420 },
@@ -101,6 +102,8 @@ export const COURSE = {
   /** Gap between hazards: [min, max] on the Day shift; Dusk laps shrink it. */
   gap: [120, 175] as const,
   duskGapScale: 0.82,
+  /** A mine pair's spacing. At cruise or brake, any jump that clears the first mine leaves room to clear the second. */
+  mineFieldGap: 56,
   /** Par is the time to drive a sector at this speed. */
   parSpeed: 88,
 };

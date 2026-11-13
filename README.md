@@ -14,7 +14,7 @@ A side-scrolling rover patrol across five sectors of Mars. It runs in the browse
 ![Vite](https://img.shields.io/badge/Vite-8-646cff?logo=vite&logoColor=white)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-![Mars Patrol gameplay: the rover jumps a boulder and fires both guns while a grader saucer and survey drones close in over the red hills](docs/screenshot.png)
+![Mars Patrol gameplay: the rover jumps a boulder and shoots down a survey drone in a burst of sparks, while a grader saucer and more drones close in over the red hills](docs/screenshot.png)
 
 </div>
 
@@ -24,8 +24,8 @@ Mars Patrol is an original arcade game inspired by the mechanics of Irem's arcad
 
 - **Five sectors, 25 beacons.** New hazards join as you go, and the hills and the volcano on the skyline change as you go. Finish the route and it starts over on the Dusk shift, faster and more crowded.
 - **Two guns at once.** Every shot fires forward along the road and straight up into the sky, so you're always watching both.
-- **A road you can learn.** Each sector is laid out from a fixed seed, so a retry gives you the same road.
-- **Sound with no audio files.** Every sound effect is generated in code, sfxr style, when the game loads.
+- **A road you can learn.** Each sector is laid out from a fixed seed, so a retry gives you the same road. Every Dusk lap lays the route out afresh.
+- **Effects and sound, all in code.** Spark bursts, shockwave rings and screen shake on every kill, and a flash and camera roll when you lose a rover. Every sound effect is generated in code, sfxr style, when the game loads.
 - **Plays anywhere.** Keyboard and mouse, an Xbox-style controller, or touch on a phone held sideways.
 
 ## How to play
@@ -34,7 +34,7 @@ The rover drives itself. Brake or boost to set its speed, jump over what's on th
 
 - **Beacons are checkpoints.** Each sector has five. When you lose a rover, you start again from the last beacon you passed.
 - **Beat par.** Clearing a sector scores 1,000, plus 100 for every second under par. The sector clock turns red once you're over.
-- **Finish the route** for a 5,000 bonus. Then the Dusk shift begins: the same five sectors, with the machines 25% faster each lap and hazards closer together.
+- **Finish the route** for a 5,000 bonus. Then the Dusk shift begins: the five sectors again with a new layout, the machines 25% faster each lap and hazards closer together.
 - **Watch the lamps.** **AIR** lights up when something is coming from above, **MINE** when seed charges are ahead, and **REAR** when a dozer is coming up behind you.
 - **Rovers:** you start with 3 and get an extra one at 10,000, 30,000 and 60,000 points. At game over you can continue from the start of the sector, with a full set of rovers and the score back at zero.
 
@@ -43,14 +43,14 @@ The rover drives itself. Brake or boost to set its speed, jump over what's on th
 | Crater | – | – | Can't be shot. Jump it. |
 | Boulder | 100 | 100 | Jump it or blast it. |
 | Big boulder | 100 | 200 | Takes two hits. |
-| Seed charge | 50 | – | Buried in the road, sometimes in pairs. Can't be shot. Jump it. |
+| Seed charge | 50 | – | Buried in the road, sometimes in pairs with room to land between them. Can't be shot. Jump it. |
 | Harvester | 100 | 300 | Crawls toward you, firing shells along the road. A shell cancels your forward shot. |
 | Dozer | 100 | 200 | Comes up from behind. Jump it as it passes, or shoot it once it's ahead. |
 | Ice core | 250 | – | Floats above the road. Jump to grab it. |
 
 | In the sky | Points | Behaviour |
 | --- | ---: | --- |
-| Survey drone | 100 | Comes in threes, weaving and dropping pellets. |
+| Survey drone | 100 | Comes in threes, weaving back and forth over the rover and dropping pellets. |
 | Grader saucer | 200 | Hovers ahead of you and drops three charges that blast new craters into the road. |
 | Relay satellite | 300 | Glides over the rover, hangs there flashing, then plunges straight down. |
 
