@@ -36,10 +36,12 @@ The game camera doesn't scroll. The scene keeps `camX` (distance driven) and pla
 
 ## Status (2026-11-12)
 
-- **Done, not yet committed:** milestones 1–4, plus sound (from 5) and touch buttons (from 6).
+- **Done and deployed:** milestones 1–4, plus from 5: lamps, route strip, banners, sound, debris sparks, shake in game pixels, dust; from 6: four touch buttons, side-bar layout, portrait overlay, tappable SOUND / CONTINUE / TITLE. Pushed to `leeeeeroyj/mars-patrol`; the Pages deploy succeeded.
+- **Done (7, publishing):** README with a staged hero screenshot (`docs/screenshot.png`), MIT licence, sprite dataset credit. Repo settings per playbook C5 applied and verified.
 - **Verified:** headless CDP suite, 16/16 checks: crater crash and jump, boulder kill, shell cancelling, dozer jump and kill, REAR lamp, satellite shot down, saucer craters, sector bonus maths, route bonus and Dusk lap, game over and continue, no exceptions. A touch run on an emulated 844×390 phone covered boost, fire and jump.
 - **Design change:** the relay satellite now glides in, hangs over the rover (flashing), then plunges. An arc aimed at the rover could only be shot once it was already on top of it.
-- **Next:** milestone 5 juice (shockwaves, bloom-free glow), a balance pass, then a real phone (6) and the README (7).
+- **Decided in code:** each Dusk lap is laid out from a new seed (the seed includes the lap), and a retry within a lap repeats its layout.
+- **Next:** milestone 5's remaining juice (shockwave rings, bloom-free glow) and its frame-time check; a real phone test (6); a balance pass (7). Check that GitHub detects the licence as MIT after the next push. Confirm two-factor login on the account.
 
 ## Milestones
 
@@ -66,5 +68,4 @@ Headless Chrome via CDP, driving real key, mouse and touch events. Dev builds ex
 ## Open questions
 
 - **The name.** "Mars Patrol" is already the title of a rover game (MobyGames), and it's one word from *Moon Patrol*. You chose to keep it for a non-commercial project; revisit before any public promotion.
-- GitHub repo name and Pages URL: `leeeeeroyj/mars-patrol`?
-- Should Dusk laps keep the same layout (learnable, like the original) or reseed each lap?
+- Dusk laps currently get a new layout each lap (see Status). Switch to the same layout every lap (learnable, like the original) if you prefer.
