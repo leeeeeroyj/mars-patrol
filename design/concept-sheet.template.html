@@ -1,0 +1,884 @@
+<title>Mars Patrol Concept Sheet</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Barlow+Semi+Condensed:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap">
+<style>
+/* Layout: a patrol briefing sheet. The live road leads, then the rover, the machines in the air and on the ground, the course, and the rules of a run. */
+:root {
+  --void: #120b09;      /* page ground, burnt regolith */
+  --panel: #1e1411;     /* raised surfaces */
+  --line: #3b2820;      /* hairlines, empty cells */
+  --ink: #f3e5d9;       /* primary text */
+  --dim: #b39587;       /* secondary text */
+  --rust: #ff8243;      /* accent: title, selection, points */
+  --tech: #4fdcc8;      /* terraformer machines, warnings that are on */
+  --danger: #ff5160;
+  --font-display: "Saira Stencil One", "Arial Narrow", Impact, sans-serif;
+  --font-body: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-pixel: "Silkscreen", "Courier New", monospace;
+  --step--1: 0.8125rem; --step-0: 1.0625rem; --step-1: 1.25rem; --step-2: 1.875rem; --step-3: clamp(2.5rem, 8vw, 4.75rem);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--void); color: var(--ink); font-family: var(--font-body); font-size: var(--step-0); line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 48px;
+}
+.wrap { max-width: 1264px; margin: 0 auto; display: grid; gap: 56px; }
+h1, h2 { font-family: var(--font-display); font-weight: 400; text-wrap: balance; margin: 0; }
+h3, .label { font-family: var(--font-pixel); font-weight: 400; margin: 0; }
+h1 { font-size: var(--step-3); line-height: 0.95; letter-spacing: 0.01em; color: var(--rust); }
+h2 { font-size: var(--step-2); line-height: 1.1; letter-spacing: 0.01em; }
+h3 { font-size: var(--step--1); letter-spacing: 0.06em; text-transform: uppercase; }
+p { margin: 0; }
+.label { font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.muted { color: var(--dim); }
+
+header.top { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 16px 32px; padding-top: 40px; }
+header.top .pitch { max-width: 62ch; margin-top: 14px; color: var(--dim); font-size: var(--step-1); line-height: 1.4; }
+.actions { display: grid; gap: 8px; justify-items: end; }
+button.primary {
+  font-family: var(--font-pixel); font-size: var(--step--1); letter-spacing: 0.08em; text-transform: uppercase;
+  background: var(--rust); color: var(--void); border: 0; padding: 12px 18px; cursor: pointer;
+  box-shadow: 4px 4px 0 var(--line);
+}
+button.primary:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--line); }
+button:focus-visible, canvas:focus-visible { outline: 2px solid var(--tech); outline-offset: 3px; }
+#copy-status { font-size: var(--step--1); color: var(--dim); min-height: 1.5em; }
+#picks-text { width: min(420px, 100%); height: 120px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); font: 12px/1.4 monospace; }
+
+/* Screen */
+.screen-block { display: grid; gap: 16px; }
+.bezel { background: #070403; border: 1px solid var(--line); padding: clamp(6px, 1.5vw, 16px); box-shadow: 0 0 0 4px var(--panel), 0 24px 60px -30px #000; }
+#screen { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 416 / 228; image-rendering: pixelated; touch-action: none; }
+.controls { display: grid; gap: 10px; }
+.keys { display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; }
+.keys > .label { min-width: 96px; }
+.key { display: inline-flex; gap: 4px; align-items: center; }
+kbd {
+  font-family: var(--font-pixel); font-size: 0.75rem; min-width: 26px; padding: 4px 6px; text-align: center;
+  background: var(--panel); border: 1px solid var(--line); border-bottom-width: 3px; color: var(--ink);
+}
+.pad-status { font-size: var(--step--1); color: var(--dim); }
+.pad-status[data-on="true"] { color: var(--tech); }
+.seg { display: inline-flex; border: 1px solid var(--line); }
+.seg button { font-family: var(--font-pixel); font-size: 0.75rem; background: var(--panel); color: var(--dim); border: 0; padding: 6px 10px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--rust); color: var(--void); }
+.screen-notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 12px 24px; }
+.screen-notes div { display: grid; gap: 2px; min-width: 0; }
+
+/* Slot panels */
+.section { display: grid; gap: 20px; }
+.section-head { display: grid; gap: 6px; max-width: 70ch; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 296px), 1fr)); gap: 16px; }
+.card { background: var(--panel); border: 1px solid var(--line); padding: 16px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.card-head { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+.hero-sprite { width: 96px; height: 96px; image-rendering: pixelated; background: var(--void); border: 1px solid var(--line); }
+.hero-sprite.flip { transform: scaleX(-1); }
+.card-title { display: grid; gap: 4px; min-width: 0; justify-items: start; }
+.chip { font-family: var(--font-pixel); font-size: 0.75rem; color: var(--void); background: var(--rust); padding: 2px 6px; font-variant-numeric: tabular-nums; }
+.chip.ghost { background: transparent; color: var(--rust); border: 1px solid var(--rust); }
+.card p { font-size: 1rem; line-height: 1.45; }
+.card-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mirror { font-family: var(--font-pixel); font-size: 0.6875rem; background: transparent; color: var(--dim); border: 1px solid var(--line); padding: 3px 8px; cursor: pointer; }
+.mirror[aria-pressed="true"] { color: var(--tech); border-color: var(--tech); }
+.cands { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.cand { padding: 0; aspect-ratio: 1; background: var(--void); border: 1px solid var(--line); cursor: pointer; display: grid; place-items: center; }
+.cand img { width: 75%; height: 75%; image-rendering: pixelated; }
+.cand:hover { border-color: var(--dim); }
+.cand[aria-pressed="true"] { border-color: var(--rust); box-shadow: inset 0 0 0 1px var(--rust); }
+.meta { font-size: var(--step--1); color: var(--dim); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.sizes { display: flex; gap: 12px; align-items: end; }
+.sizes figure { margin: 0; display: grid; gap: 4px; justify-items: center; }
+.sizes img { image-rendering: pixelated; background: var(--void); }
+.sizes figcaption { font-size: 0.75rem; color: var(--dim); }
+#ground-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+#rover-grid { grid-template-columns: minmax(0, 720px); }
+#rover-grid .card { grid-template-columns: auto 1fr; align-items: start; gap: 14px 24px; }
+#rover-grid .card > .cands, #rover-grid .card > .card-tools { grid-column: 1 / -1; }
+#rover-grid .card > .cands { grid-template-columns: repeat(8, 1fr); }
+@media (max-width: 560px) { #rover-grid .card { grid-template-columns: 1fr; } #rover-grid .card > .cands { grid-template-columns: repeat(4, 1fr); } }
+
+/* Rules and comparison */
+.rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 16px 32px; }
+.rules div { display: grid; gap: 4px; border-top: 1px solid var(--line); padding-top: 12px; align-content: start; }
+.rules strong { font-family: var(--font-pixel); font-weight: 400; color: var(--rust); font-variant-numeric: tabular-nums; }
+.diff { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.diff div { background: var(--panel); border: 1px solid var(--line); padding: 16px; display: grid; gap: 8px; align-content: start; min-width: 0; }
+.diff ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; }
+footer { border-top: 1px solid var(--line); padding-top: 16px; font-size: var(--step--1); color: var(--dim); display: grid; gap: 6px; }
+footer a { color: var(--tech); }
+@media (prefers-reduced-motion: reduce) { button.primary:active { transform: none; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <p class="label">Concept sheet · v0.1 · working title</p>
+      <h1>MARS PATROL</h1>
+      <p class="pitch">A side-scrolling rover patrol across Mars. The colony's abandoned terraforming machines are tearing up the supply road. Jump the craters, blast the boulders and drones, and beat par to every relay beacon from Chryse Flats to Olympus.</p>
+    </div>
+    <div class="actions">
+      <button class="primary" id="copy-picks" type="button">Copy my picks</button>
+      <span id="copy-status" role="status"></span>
+      <textarea id="picks-text" hidden readonly aria-label="Your picks as JSON"></textarea>
+    </div>
+  </header>
+
+  <section class="screen-block" aria-labelledby="screen-h">
+    <div class="section-head">
+      <h2 id="screen-h">Game screen</h2>
+      <p class="muted">Live mockup at the game's real resolution (416&times;228, 16&nbsp;px sprites). It drives itself until you take over: click the screen, then drive it. Every sprite you pick below swaps in here.</p>
+    </div>
+    <div class="bezel"><canvas id="screen" width="416" height="228" tabindex="0" aria-label="Game screen mockup. Click it, then use the arrow keys to change speed and jump, and Z or a mouse click to fire."></canvas></div>
+    <div class="controls">
+      <div class="keys" aria-label="Keyboard and mouse">
+        <span class="label">Keyboard</span>
+        <span class="key"><kbd>&larr;</kbd><kbd>&rarr;</kbd>&nbsp;brake / boost</span>
+        <span class="key"><kbd>&uarr;</kbd><kbd>Space</kbd>&nbsp;jump</span>
+        <span class="key"><kbd>Z</kbd><kbd>Click</kbd>&nbsp;fire forward + up</span>
+        <span class="key"><kbd>Right click</kbd>&nbsp;jump</span>
+      </div>
+      <div class="keys" aria-label="Controller">
+        <span class="label">Controller</span>
+        <span class="key"><kbd>L stick</kbd><kbd>D-pad</kbd>&nbsp;brake / boost</span>
+        <span class="key"><kbd>A</kbd>&nbsp;jump</span>
+        <span class="key"><kbd>X</kbd><kbd>RT</kbd>&nbsp;fire</span>
+        <span class="pad-status" id="pad-status" role="status">No controller yet. Press any button on it.</span>
+      </div>
+      <div class="keys" aria-label="Touch">
+        <span class="label">Touch</span>
+        <span class="key">Left thumb&nbsp;<kbd>&#9664;</kbd><kbd>&#9654;</kbd>&nbsp;brake / boost</span>
+        <span class="key">Right thumb&nbsp;<kbd>JUMP</kbd><kbd>FIRE</kbd></span>
+      </div>
+      <div class="keys">
+        <span class="label">Shift</span>
+        <span class="seg" role="group" aria-label="Shift"><button type="button" id="shift-day" data-shift="day" aria-pressed="true">Day</button><button type="button" id="shift-dusk" data-shift="dusk" aria-pressed="false">Dusk</button></span>
+        <span class="label">Touch buttons</span>
+        <span class="seg" role="group" aria-label="Touch buttons"><button type="button" id="touch-off" data-touch="off" aria-pressed="true">Hide</button><button type="button" id="touch-on" data-touch="on" aria-pressed="false">Show</button></span>
+      </div>
+    </div>
+    <div class="screen-notes">
+      <div><span class="label">Top bar</span><span>Score, rovers left, current beacon and the time since the last one. Three warning lamps light before trouble arrives: AIR (machines overhead), MINE (charges on the road ahead) and REAR (a dozer behind you).</span></div>
+      <div><span class="label">Route strip</span><span>The whole route on one line: 5 sectors of 5 beacons. The filled part is road you've covered; the marker is you.</span></div>
+      <div><span class="label">Road</span><span>The rover sits at the left third and slides forward when you boost, so you see more road ahead at speed. Craters and the land behind are drawn in code, in four parallax layers.</span></div>
+      <div><span class="label">Touch layout</span><span>On wide phones the buttons sit in the bars beside the game. On 16:9 screens they overlay the bottom corners, where the ground strip leaves room.</span></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="rover-h">
+    <div class="section-head">
+      <h2 id="rover-h">Your rover</h2>
+      <p class="muted">Seen side-on, nose to the right. It never rotates: it tilts a pixel on landing and bounces on rough road. If a pick faces left, press Mirror.</p>
+    </div>
+    <div class="grid" id="rover-grid"></div>
+  </section>
+
+  <section class="section" aria-labelledby="air-h">
+    <div class="section-head">
+      <h2 id="air-h">Air threats</h2>
+      <p class="muted">The terraformers' survey fleet. Only your upward shot reaches them. The AIR lamp lights a moment before each wave.</p>
+    </div>
+    <div class="grid" id="air-grid"></div>
+  </section>
+
+  <section class="section" aria-labelledby="ground-h">
+    <div class="section-head">
+      <h2 id="ground-h">Ground threats</h2>
+      <p class="muted">Things on the road. Jump them or shoot them with the forward shot, which only reaches about a third of the screen. Points for a jump are shown first, then for a kill.</p>
+    </div>
+    <div class="grid" id="ground-grid"></div>
+  </section>
+
+  <section class="section" aria-labelledby="course-h">
+    <div class="section-head">
+      <h2 id="course-h">Course</h2>
+      <p class="muted">Craters, terrain and the four background layers are drawn in code. These two are sprites.</p>
+    </div>
+    <div class="grid" id="course-grid"></div>
+  </section>
+
+  <section class="section" aria-labelledby="rules-h">
+    <div class="section-head"><h2 id="rules-h">How a patrol plays</h2></div>
+    <div class="rules">
+      <div><strong>5 sectors &times; 5 beacons</strong><span>Chryse Flats, Ares Vallis, Tharsis Rise, Noctis Labyrinth, Olympus Approach. Each sector adds a new threat and a new backdrop.</span></div>
+      <div><strong>Par time</strong><span>Each sector has a par time. Clear it to score 1,000 plus 100 for every second under par. The full route adds 5,000 on top.</span></div>
+      <div><strong>Respawn at the beacon</strong><span>Lose a rover and you restart from the last beacon you passed. The sector clock keeps running.</span></div>
+      <div><strong>Day, then Dusk</strong><span>The first run is the Day shift. Then the same route at Dusk, with faster machines, denser hazards and Mars's blue sunset. Dusk repeats and gets harder each lap.</span></div>
+      <div><strong>Extra rovers</strong><span>At 10,000, 30,000 and 60,000 points. Start with 3.</span></div>
+      <div><strong>Continue</strong><span>After game over you can continue from the start of the sector, with the score reset to zero.</span></div>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="diff-h">
+    <div class="section-head">
+      <h2 id="diff-h">From the arcade original</h2>
+      <p class="muted">Re-imagined from Irem's 1982 <em>Moon Patrol</em>. The mechanics are borrowed; the setting, names, art and route are new.</p>
+    </div>
+    <div class="diff">
+      <div><span class="label">Kept</span><ul>
+        <li>Auto-scrolling road with brake and boost, where speed changes jump length</li>
+        <li>One button fires forward and up at once</li>
+        <li>Three warning lamps, beacon checkpoints and a route strip</li>
+        <li>Par-time bonus per sector, and the second, harder lap</li>
+        <li>Air bombs that blast fresh craters into the road</li>
+      </ul></div>
+      <div><span class="label">Changed</span><ul>
+        <li>Mars, not the Moon: rogue terraforming machines instead of aliens</li>
+        <li>Numbered beacons (2-3) in 5 named sectors instead of 26 lettered checkpoints</li>
+        <li>Beginner and Champion courses become Day and Dusk shifts</li>
+        <li>Respawn at the last beacon, not the last major checkpoint</li>
+      </ul></div>
+      <div><span class="label">New</span><ul>
+        <li>Ice cores to grab at the top of a jump</li>
+        <li>Relay satellites that dive at you, so braking and boosting dodge as well as aim</li>
+        <li>Juice: dust trails, shockwaves, screen shake in game pixels</li>
+        <li>Controller and touch from day one</li>
+      </ul></div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Sprites: <a href="https://huggingface.co/spaces/cfahlgren1/pixel-search" target="_blank" rel="noopener">Pixel Search</a> catalog of <a href="https://huggingface.co/datasets/Angais/pixel-art-atlas-1.4m" target="_blank" rel="noopener">Angais/pixel-art-atlas-1.4m</a>, CC0, AI-generated. Numbers under each sprite are its catalog id.</span>
+    <span>Fonts: Saira Stencil One, Barlow Semi Condensed and Silkscreen (SIL OFL).</span>
+  </footer>
+</div>
+
+<script>
+const SPRITES = /*SPRITES*/{};
+
+const ROVER = { slot: "player", name: "Patrol rover", text: "Pick the silhouette that reads best at 1×. That's the size it plays at." };
+const AIR = [
+  { slot: "scout", name: "Survey drone", pts: "100", text: "Arrives in threes, weaving across the sky. Drops pellets straight down." },
+  { slot: "bomber", name: "Grader saucer", pts: "200", text: "Hovers just ahead of you and drops charges. Every charge that lands blasts a new crater into the road." },
+  { slot: "diver", name: "Relay satellite", pts: "300", text: "Falls out of orbit in a steep arc aimed at the rover. Shoot it on the way down, or brake or boost so it misses." },
+];
+const GROUND = [
+  { slot: "boulder", name: "Boulder", pts: "100 / 100", text: "Small ones break in one hit. Big ones take two and flash when cracked." },
+  { slot: "mine", name: "Seed charge", pts: "50 / –", text: "Terraforming charges buried in the road. Can't be shot: jump them. The MINE lamp lights before a field." },
+  { slot: "harvester", name: "Harvester", pts: "100 / 300", text: "Crawls toward you firing shells along the road. A shell cancels your forward shot, so fire again." },
+  { slot: "dozer", name: "Dozer", pts: "100 / 200", text: "Rams you from behind at speed. Jump it as it passes underneath, then shoot it once it's ahead." },
+];
+const COURSE = [
+  { slot: "beacon", name: "Relay beacon", text: "Checkpoint on the roadside. Passing one shows your time against par and sets your respawn point." },
+  { slot: "ice", name: "Ice core", pts: "250", text: "Hangs at the top of a jump. Grab it in mid-air." },
+];
+
+// Picks: first candidate by default; remembered per viewer when storage allows.
+const picks = {};
+for (const slot in SPRITES) picks[slot] = SPRITES[slot][0]?.id;
+const mirror = { dozer: true };
+try {
+  const saved = JSON.parse(localStorage.getItem("mars-patrol-picks") || "{}");
+  for (const slot in saved) if (SPRITES[slot]?.some((s) => s.id === saved[slot])) picks[slot] = saved[slot];
+  const savedMirror = JSON.parse(localStorage.getItem("mars-patrol-mirror") || "null");
+  if (savedMirror) { for (const k in mirror) delete mirror[k]; for (const slot of savedMirror) if (SPRITES[slot]) mirror[slot] = true; }
+} catch (e) {}
+function save() {
+  try {
+    localStorage.setItem("mars-patrol-picks", JSON.stringify(picks));
+    localStorage.setItem("mars-patrol-mirror", JSON.stringify(Object.keys(mirror)));
+  } catch (e) {}
+}
+
+const images = {};
+for (const slot in SPRITES) for (const s of SPRITES[slot]) { const img = new Image(); img.src = s.src; images[s.id] = img; }
+const pick = (slot) => images[picks[slot]];
+const entry = (slot) => SPRITES[slot].find((s) => s.id === picks[slot]);
+
+function candidates(slot) {
+  const box = document.createElement("div");
+  box.className = "cands";
+  for (const s of SPRITES[slot]) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "cand"; b.dataset.slot = slot; b.dataset.id = s.id;
+    b.title = `${s.subject} · #${s.id}`;
+    b.setAttribute("aria-label", `${s.subject}, catalog ${s.id}`);
+    b.setAttribute("aria-pressed", String(s.id === picks[slot]));
+    const img = document.createElement("img"); img.src = s.src; img.alt = "";
+    b.append(img); box.append(b);
+  }
+  return box;
+}
+
+function card({ slot, name, pts, text }) {
+  const c = document.createElement("article");
+  c.className = "card"; c.dataset.slot = slot;
+  const head = document.createElement("div"); head.className = "card-head";
+  const hero = document.createElement("img"); hero.className = "hero-sprite"; hero.alt = name; hero.dataset.hero = slot;
+  const title = document.createElement("div"); title.className = "card-title";
+  const h = document.createElement("h3"); h.textContent = name; title.append(h);
+  if (pts) { const chip = document.createElement("span"); chip.className = "chip"; chip.textContent = `${pts} pts`; title.append(chip); }
+  const meta = document.createElement("span"); meta.className = "meta"; meta.dataset.meta = slot; title.append(meta);
+  head.append(hero, title); c.append(head);
+  if (text) { const p = document.createElement("p"); p.textContent = text; c.append(p); }
+  const tools = document.createElement("div"); tools.className = "card-tools";
+  const label = document.createElement("span"); label.className = "label"; label.textContent = "Candidates";
+  const m = document.createElement("button"); m.type = "button"; m.className = "mirror"; m.dataset.mirror = slot; m.textContent = "Mirror";
+  tools.append(label, m); c.append(tools);
+  c.append(candidates(slot));
+  return c;
+}
+
+function roverCard() {
+  const c = card(ROVER);
+  const sizes = document.createElement("div"); sizes.className = "sizes";
+  for (const n of [1, 2, 4]) {
+    const f = document.createElement("figure");
+    const img = document.createElement("img"); img.width = 16 * n; img.height = 16 * n; img.alt = ""; img.dataset.hero = "player";
+    const cap = document.createElement("figcaption"); cap.textContent = `${n}× · ${16 * n}px`;
+    f.append(img, cap); sizes.append(f);
+  }
+  c.insertBefore(sizes, c.querySelector(".card-tools"));
+  return c;
+}
+
+document.getElementById("rover-grid").append(roverCard());
+for (const e of AIR) document.getElementById("air-grid").append(card(e));
+for (const e of GROUND) document.getElementById("ground-grid").append(card(e));
+for (const e of COURSE) document.getElementById("course-grid").append(card(e));
+
+function refreshCards() {
+  document.querySelectorAll("[data-hero]").forEach((img) => { img.src = entry(img.dataset.hero).src; img.classList.toggle("flip", Boolean(mirror[img.dataset.hero])); });
+  document.querySelectorAll("[data-meta]").forEach((m) => { const s = entry(m.dataset.meta); m.textContent = `${s.subject} · #${s.id}`; });
+  document.querySelectorAll(".cand").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.id) === picks[b.dataset.slot])));
+  document.querySelectorAll("[data-mirror]").forEach((b) => b.setAttribute("aria-pressed", String(Boolean(mirror[b.dataset.mirror]))));
+}
+refreshCards();
+
+document.addEventListener("click", (ev) => {
+  const b = ev.target.closest(".cand");
+  const m = ev.target.closest("[data-mirror]");
+  if (b) picks[b.dataset.slot] = Number(b.dataset.id);
+  else if (m) { const s = m.dataset.mirror; if (mirror[s]) delete mirror[s]; else mirror[s] = true; }
+  else return;
+  save();
+  refreshCards();
+});
+
+document.getElementById("copy-picks").addEventListener("click", () => {
+  const json = JSON.stringify({ ...picks, mirror: Object.keys(mirror) }, null, 2);
+  const status = document.getElementById("copy-status");
+  const area = document.getElementById("picks-text");
+  const fallback = () => { area.value = json; area.hidden = false; area.focus(); area.select(); status.textContent = "Copy the selected text below."; };
+  try {
+    navigator.clipboard.writeText(json).then(() => { area.hidden = true; status.textContent = "Copied. Paste it back to Claude."; }, fallback);
+  } catch (e) { fallback(); }
+});
+
+// ---- Screen mockup ----
+const cv = document.getElementById("screen");
+const ctx = cv.getContext("2d");
+const W = 416, H = 228, HUD = 24, GY = 200;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const C = { void: "#070403", ink: "#f3e5d9", dim: "#b39587", rust: "#ff8243", tech: "#4fdcc8", danger: "#ff5160", line: "#3b2820", shot: "#fff1c2" };
+const SECTORS = ["CHRYSE FLATS", "ARES VALLIS", "THARSIS RISE", "NOCTIS LABYRINTH", "OLYMPUS APPROACH"];
+const PAR = 45;
+const THEMES = {
+  day: { skyTop: [176, 104, 70], skyLow: [236, 186, 140], sun: "#fff3d6", halo: "rgba(255,240,210,0.25)", far: "#c58a64", tower: "#a26446", towerLit: "#4fdcc8", mid: "#a95c3a", near: "#8a4428", road: "#c87447", roadTop: "#efaa76", strata: ["#7a3a22", "#6c321d", "#843f25", "#5f2b19"], hole: "#2a130c", stars: 0 },
+  dusk: { skyTop: [14, 16, 34], skyLow: [92, 116, 160], sun: "#e9f4ff", halo: "rgba(120,170,255,0.35)", far: "#3d3f5e", tower: "#2b2a44", towerLit: "#4fdcc8", mid: "#3b2b3c", near: "#4a2a2a", road: "#7a4a3a", roadTop: "#b07a62", strata: ["#4a2a24", "#3f241f", "#522e27", "#36201b"], hole: "#140a08", stars: 1 },
+};
+let shift = "day";
+let showTouch = false;
+
+const hash = (a, b) => (((a * 73856093) ^ (b * 19349663)) >>> 0);
+function noise(x, seed) {
+  const i = Math.floor(x), f = x - i, u = f * f * (3 - 2 * f);
+  const a = (hash(i, seed) % 1000) / 1000, b = (hash(i + 1, seed) % 1000) / 1000;
+  return a + (b - a) * u;
+}
+
+// World state. World x grows to the right; the camera's left edge is camX.
+let camX = 0, speed = 75, targetSpeed = 75;
+const rover = { y: 0, vy: 0, dead: 0, blink: 0, tilt: 0 };
+let score = 12450, rovers = 3, beaconNo = 7, sectorTime = 12, banner = null, lastBeaconX = 0;
+let craters = [], ground = [], air = [], shots = [], ups = [], shells = [], drops = [], parts = [], pops = [];
+let nextGround = 260, patIdx = 0, airClock = 3, airIdx = 0, shake = 0;
+const roverSX = () => 72 + (speed - 50) * 0.5;
+const roverWX = () => camX + roverSX();
+
+const PATTERN = ["crater", "boulder", "ice", "crater", "mine", "harvester", "bigboulder", "beacon", "crater", "dozer", "mine2", "boulder", "crater", "ice", "harvester", "beacon"];
+function spawnGround(kind, x) {
+  if (kind === "crater") craters.push({ x, w: 20 + (hash(x, 3) % 14) });
+  else if (kind === "mine") ground.push({ kind: "mine", x });
+  else if (kind === "mine2") { ground.push({ kind: "mine", x }); ground.push({ kind: "mine", x: x + 46 }); }
+  else if (kind === "boulder") ground.push({ kind: "boulder", x, hp: 1 });
+  else if (kind === "bigboulder") ground.push({ kind: "boulder", x, hp: 2, big: true });
+  else if (kind === "harvester") ground.push({ kind: "harvester", x, hp: 1, cool: 0.6 });
+  else if (kind === "ice") ground.push({ kind: "ice", x });
+  else if (kind === "beacon") ground.push({ kind: "beacon", x });
+  else if (kind === "dozer") ground.push({ kind: "dozer", x: camX - 40, behind: true });
+}
+const AIRPAT = ["scouts", "diver", "bomber", "scouts", "bomber", "diver"];
+function spawnAir(kind) {
+  const dusk = shift === "dusk" ? 1.25 : 1;
+  if (kind === "scouts") for (let i = 0; i < 3; i++) air.push({ kind: "scout", x: 440 + i * 26, y: 74 + i * 14, hx: 440 + i * 26, hy: 70 + i * 16, t: 0, ph: i * 2.1, cool: 1 + i * 0.6, life: 7, sp: dusk });
+  else if (kind === "bomber") air.push({ kind: "bomber", x: 440, y: 52, t: 0, cool: 1.4, left: 3, sp: dusk });
+  else if (kind === "diver") {
+    const tx = roverSX() + 4, ty = GY - 10, p0 = { x: 430, y: 26 }, p2 = { x: tx - 150, y: 12 };
+    air.push({ kind: "diver", t: 0, dur: 2.4 / dusk, p0, p2, p1: { x: 2 * tx - (p0.x + p2.x) / 2, y: 2 * ty - (p0.y + p2.y) / 2 }, x: p0.x, y: p0.y });
+  }
+}
+
+function burst(wx, y, colors, n = 14, power = 70) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, v = power * (0.3 + Math.random());
+    parts.push({ x: wx, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, life: 0.4 + Math.random() * 0.5, c: colors[i % colors.length], g: 160 });
+  }
+}
+function pop(wx, y, pts) { score += pts; pops.push({ x: wx, y, t: 0, s: `+${pts}` }); }
+
+function crash() {
+  if (rover.dead || rover.blink > 0) return;
+  rover.dead = 1.4;
+  burst(roverWX(), GY - 8 - rover.y, [C.rust, "#ffd27a", C.ink, "#7a3a22"], 28, 110);
+  shake = 0.35;
+  rovers -= 1;
+}
+function respawn() {
+  rovers = rovers <= 0 ? 3 : rovers;
+  const lo = camX - 60, hi = camX + W + 60;
+  craters = craters.filter((c) => c.x + c.w < lo || c.x > hi);
+  ground = ground.filter((g) => g.kind === "beacon" || g.x < lo || g.x > hi);
+  air = []; shells = []; drops = []; shots = []; ups = [];
+  rover.y = 0; rover.vy = 0; rover.blink = 1.6; speed = targetSpeed = 75;
+}
+
+// Input
+const keys = new Set();
+let lastInput = -1e9, jumpQueued = false, mouseFire = false, padLabel = "";
+const touch = { left: false, right: false, jump: false, fire: false };
+const TBTN = { left: { x: 24, y: 204, r: 14, s: "◀" }, right: { x: 58, y: 204, r: 14, s: "▶" }, fire: { x: 356, y: 206, r: 15, s: "FIRE" }, jump: { x: 392, y: 180, r: 15, s: "JUMP" } };
+
+function readPad(now) {
+  let pads;
+  try { pads = navigator.getGamepads ? navigator.getGamepads() : []; }
+  catch (e) { setPadStatus("This viewer blocks controller input. Open design/concept-sheet.html in a browser tab to use it.", false); return null; }
+  const p = [...pads].find((g) => g && g.connected);
+  if (!p) { setPadStatus("No controller yet. Press any button on it.", false); return null; }
+  setPadStatus(`Connected: ${p.id.replace(/\s*\(.*\)\s*/g, " ").trim()}`, true);
+  const b = (i) => Boolean(p.buttons[i] && p.buttons[i].pressed);
+  const ax = Math.abs(p.axes[0] || 0) < 0.3 ? 0 : p.axes[0];
+  const out = { dir: b(14) ? -1 : b(15) ? 1 : Math.sign(ax), jump: b(0), fire: b(2) || b(5) || (p.buttons[7] && p.buttons[7].value > 0.3) };
+  if (out.dir || out.jump || out.fire || p.buttons.some((x) => x.pressed)) lastInput = now;
+  return out;
+}
+function setPadStatus(label, on) {
+  if (label === padLabel) return;
+  padLabel = label;
+  const el = document.getElementById("pad-status");
+  el.textContent = label; el.dataset.on = String(on);
+}
+let padJumpWas = false;
+
+function autopilot() {
+  const rx = roverWX();
+  const ahead = (x) => x - rx;
+  const lead = 14 + speed * 0.13;
+  let jump = false;
+  for (const c of craters) { const d = ahead(c.x); if (d > 0 && d < lead) jump = true; }
+  for (const g of ground) {
+    const d = ahead(g.x);
+    if (g.kind === "mine" && d > 0 && d < lead) jump = true;
+    if (g.kind === "boulder" && g.big && g.hp > 1 && d > 0 && d < 22) jump = true;
+    if (g.kind === "dozer" && g.behind && d < 0 && d > -26) jump = true;
+  }
+  for (const s of shells) { const d = ahead(s.x); if (d > 0 && d < 22) jump = true; }
+  return { dir: 0, jump, fire: true };
+}
+
+let lastTime = performance.now(), clock = 0, fireCool = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastTime) / 1000); lastTime = now;
+  const pad = readPad(now);
+  const demo = now - lastInput > 2500;
+  const frozen = reduceMotion && lastInput < 0;
+  if (!frozen) step(dt, demo ? autopilot() : {
+    dir: (keys.has("right") || touch.right || (pad && pad.dir > 0) ? 1 : 0) - (keys.has("left") || touch.left || (pad && pad.dir < 0) ? 1 : 0),
+    jump: jumpQueued || keys.has("jump") || touch.jump || Boolean(pad && pad.jump && !padJumpWas),
+    fire: keys.has("fire") || mouseFire || touch.fire || Boolean(pad && pad.fire),
+  });
+  padJumpWas = Boolean(pad && pad.jump);
+  jumpQueued = false;
+  draw(demo);
+  requestAnimationFrame(frame);
+}
+
+function step(dt, input) {
+  clock += dt;
+  const dusk = shift === "dusk";
+  // Speed and scroll
+  targetSpeed = rover.dead ? 0 : input.dir > 0 ? 110 : input.dir < 0 ? 50 : 75;
+  speed += Math.sign(targetSpeed - speed) * Math.min(Math.abs(targetSpeed - speed), (rover.dead ? 140 : 70) * dt);
+  camX += speed * dt;
+  sectorTime += dt;
+  if (rover.dead) { rover.dead -= dt; if (rover.dead <= 0) { rover.dead = 0; respawn(); } }
+  if (rover.blink > 0) rover.blink -= dt;
+  shake = Math.max(0, shake - dt);
+  const rx = roverWX(), sx = roverSX();
+
+  // Jump and gravity
+  if (input.jump && rover.y === 0 && !rover.dead) { rover.vy = 170; rover.y = 0.01; }
+  if (rover.y > 0) {
+    rover.vy -= 480 * dt; rover.y += rover.vy * dt;
+    if (rover.y <= 0) { rover.y = 0; rover.vy = 0; rover.tilt = 0.18; burst(rx, GY, ["#c88a62", "#a8683f"], 6, 30); }
+  }
+  rover.tilt = Math.max(0, rover.tilt - dt);
+  if (!rover.dead && rover.y === 0 && Math.random() < speed / 300) parts.push({ x: rx - 9, y: GY - 2, vx: -20 - Math.random() * 20, vy: -10 - Math.random() * 14, life: 0.5, c: THEMES[shift].roadTop, g: 20 });
+
+  // Fire: one press sends a forward shot (one at a time) and an upward shot.
+  fireCool -= dt;
+  if (input.fire && fireCool <= 0 && !rover.dead) {
+    fireCool = 0.24;
+    if (!shots.length) shots.push({ x: rx + 9, y: GY - 7 - rover.y, start: rx + 9 });
+    if (ups.length < 3) ups.push({ sx: sx, y: GY - 16 - rover.y });
+  }
+  for (const s of shots) s.x += (speed + 230) * dt;
+  shots = shots.filter((s) => s.x - s.start < 150);
+  for (const u of ups) u.y -= 260 * dt;
+  ups = ups.filter((u) => u.y > HUD);
+
+  // Course generation
+  while (nextGround < camX + W + 200) {
+    const kind = PATTERN[patIdx++ % PATTERN.length];
+    spawnGround(kind, nextGround);
+    nextGround += (dusk ? 95 : 120) + (hash(patIdx, 9) % 60);
+  }
+  airClock -= dt;
+  if (airClock <= 0 && !rover.dead) { spawnAir(AIRPAT[airIdx++ % AIRPAT.length]); airClock = dusk ? 5 : 7; }
+
+  // Ground things
+  for (const g of ground) {
+    if (g.kind === "harvester") {
+      g.x -= 18 * dt;
+      g.cool -= dt;
+      const gs = g.x - camX;
+      if (g.cool <= 0 && gs < W - 8 && gs > sx + 30) { shells.push({ x: g.x - 9, y: GY - 6 }); g.cool = dusk ? 1.3 : 1.8; }
+    }
+    if (g.kind === "dozer") {
+      g.x += (g.behind ? speed + 42 : speed + 28) * dt;
+      if (g.behind && g.x > rx + 12) { g.behind = false; if (!rover.dead) pop(rx, GY - 30, 100); }
+    }
+    if (g.hit) g.hit -= dt;
+  }
+  for (const s of shells) s.x -= (dusk ? 110 : 85) * dt;
+
+  // Forward shots vs ground things and shells
+  for (const s of shots) {
+    for (const sh of shells) if (!sh.dead && Math.abs(sh.x - s.x) < 5) { sh.dead = s.dead = true; burst(s.x, s.y, [C.tech, C.shot], 6, 40); }
+    for (const g of ground) {
+      if (s.dead || g.dead || !["boulder", "harvester", "dozer"].includes(g.kind) || (g.kind === "dozer" && g.behind)) continue;
+      if (Math.abs(g.x - s.x) < 8) {
+        s.dead = true; g.hp = (g.hp || 1) - 1; g.hit = 0.15;
+        if (g.hp <= 0) {
+          g.dead = true;
+          burst(g.x, GY - 8, g.kind === "boulder" ? ["#c87447", "#7a3a22", "#efaa76"] : [C.tech, C.rust, C.ink], 18, 80);
+          pop(g.x, GY - 22, g.kind === "boulder" ? 100 : g.kind === "harvester" ? 300 : 200);
+        }
+      }
+    }
+  }
+  shots = shots.filter((s) => !s.dead);
+  shells = shells.filter((s) => !s.dead && s.x > camX - 20);
+
+  // Air things (screen space)
+  for (const a of air) {
+    a.t += dt;
+    if (a.kind === "scout") {
+      a.hx += ((a.t < a.life ? 300 - a.ph * 30 : -120) - a.hx) * Math.min(1, dt * 0.8 * a.sp);
+      a.x = a.hx + Math.sin(a.t * 1.3 * a.sp + a.ph) * 46; a.y = a.hy + Math.sin(a.t * 2.2 + a.ph) * 12;
+      a.cool -= dt;
+      if (a.cool <= 0 && a.x > 20 && a.x < W - 20) { drops.push({ sx: a.x, y: a.y + 6, vy: 70, kind: "pellet" }); a.cool = 1.6 + (hash(Math.floor(clock * 10), a.ph * 7) % 100) / 100; }
+      if (a.x < -30) a.dead = true;
+    } else if (a.kind === "bomber") {
+      const goal = a.left > 0 ? sx + 110 : -60;
+      a.x += (goal - a.x) * Math.min(1, dt * 0.9 * a.sp); a.y = 52 + Math.sin(a.t * 2) * 6;
+      a.cool -= dt;
+      if (a.left > 0 && a.cool <= 0 && Math.abs(a.x - goal) < 30) { drops.push({ sx: a.x, y: a.y + 8, vy: 10, kind: "charge" }); a.left -= 1; a.cool = 1.9 / a.sp; }
+      if (a.x < -40) a.dead = true;
+    } else if (a.kind === "diver") {
+      const u = a.t / a.dur, v = 1 - u;
+      a.x = v * v * a.p0.x + 2 * v * u * a.p1.x + u * u * a.p2.x;
+      a.y = v * v * a.p0.y + 2 * v * u * a.p1.y + u * u * a.p2.y;
+      if (u >= 1) a.dead = true;
+    }
+    for (const up of ups) if (!a.dead && !up.dead && Math.abs(up.sx - a.x) < 9 && Math.abs(up.y - a.y) < 9) {
+      up.dead = a.dead = true;
+      burst(camX + a.x, a.y, [C.tech, "#c7fff6", C.rust], 16, 90);
+      pop(camX + a.x, a.y - 8, a.kind === "scout" ? 100 : a.kind === "bomber" ? 200 : 300);
+    }
+    if (!a.dead && !rover.dead && Math.abs(a.x - sx) < 11 && Math.abs(a.y - (GY - 8 - rover.y)) < 10) crash();
+  }
+  air = air.filter((a) => !a.dead);
+  ups = ups.filter((u) => !u.dead);
+
+  // Falling pellets and charges
+  for (const d of drops) {
+    d.vy += (d.kind === "charge" ? 200 : 40) * dt; d.y += d.vy * dt;
+    for (const up of ups) if (!up.dead && Math.abs(up.sx - d.sx) < 5 && Math.abs(up.y - d.y) < 6) { up.dead = d.dead = true; burst(camX + d.sx, d.y, [C.tech, C.shot], 6, 40); }
+    if (!d.dead && !rover.dead && Math.abs(d.sx - sx) < 8 && Math.abs(d.y - (GY - 8 - rover.y)) < 8) { d.dead = true; crash(); }
+    if (!d.dead && d.y >= GY - 2) {
+      d.dead = true;
+      const wx = camX + d.sx;
+      if (d.kind === "charge") {
+        craters.push({ x: wx - 8, w: 16, fresh: 0.6 });
+        burst(wx, GY - 2, ["#ffd27a", C.rust, "#7a3a22"], 20, 90); shake = Math.max(shake, 0.15);
+      } else burst(wx, GY - 2, ["#c88a62", C.tech], 4, 30);
+    }
+  }
+  drops = drops.filter((d) => !d.dead);
+  ups = ups.filter((u) => !u.dead);
+
+  // Rover collisions with the road
+  if (!rover.dead && rover.blink <= 0) {
+    for (const c of craters) if (rover.y === 0 && rx > c.x + 4 && rx < c.x + c.w - 4) crash();
+    for (const g of ground) {
+      if (g.dead) continue;
+      const near = Math.abs(g.x - rx) < 11;
+      if (g.kind === "mine" && near && rover.y < 6) { g.dead = true; crash(); }
+      if ((g.kind === "boulder" || g.kind === "harvester") && near && rover.y < 13) crash();
+      if (g.kind === "dozer" && near && rover.y < 13) { g.dead = true; crash(); }
+      if (g.kind === "ice" && Math.abs(g.x - rx) < 12 && Math.abs(GY - 36 - (GY - 8 - rover.y)) < 12) { g.dead = true; pop(g.x, GY - 50, 250); burst(g.x, GY - 36, ["#d8f6ff", C.tech, "#ffffff"], 12, 60); }
+    }
+    for (const s of shells) if (Math.abs(s.x - rx) < 9 && rover.y < 8) { s.dead = true; crash(); }
+  }
+  // Jumped-over scoring and beacons
+  for (const g of ground) {
+    if (g.dead || g.passed || g.x > rx - 10 || rover.dead) continue;
+    if (g.kind === "dozer") continue;
+    g.passed = true;
+    if (g.kind === "mine") pop(g.x, GY - 22, 50);
+    else if (g.kind === "boulder" || g.kind === "harvester") pop(g.x, GY - 26, 100);
+    else if (g.kind === "beacon") {
+      beaconNo = (beaconNo + 1) % 25; lastBeaconX = camX;
+      const sec = Math.floor(beaconNo / 5), idx = (beaconNo % 5) + 1, t = Math.round(sectorTime);
+      if (idx === 5) {
+        const bonus = 1000 + 100 * Math.max(0, PAR - t);
+        score += bonus; sectorTime = 0;
+        banner = { t: 2.8, a: `SECTOR ${sec + 1} CLEAR  ·  ${SECTORS[sec]}`, b: `TIME ${fmt(t)}  PAR ${fmt(PAR)}  +${bonus.toLocaleString("en-US")}` };
+      } else banner = { t: 2.4, a: `BEACON ${sec + 1}-${idx}  ·  ${SECTORS[sec]}`, b: `TIME ${fmt(t)}   PAR ${fmt(PAR)}` };
+    }
+  }
+  ground = ground.filter((g) => !g.dead && g.x > camX - 80 && !(g.kind === "dozer" && !g.behind && g.x > camX + W + 60));
+  craters = craters.filter((c) => c.x + c.w > camX - 10);
+  for (const c of craters) if (c.fresh) c.fresh = Math.max(0, c.fresh - dt);
+
+  for (const p of parts) { p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+  parts = parts.filter((p) => p.life > 0);
+  for (const p of pops) p.t += dt;
+  pops = pops.filter((p) => p.t < 0.9);
+  if (banner) { banner.t -= dt; if (banner.t <= 0) banner = null; }
+}
+
+const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+function drawSprite(slot, x, y, flipExtra = false) {
+  const img = pick(slot);
+  if (!img || !img.complete) return;
+  const flip = Boolean(mirror[slot]) !== flipExtra;
+  ctx.save(); ctx.translate(Math.round(x), Math.round(y));
+  if (flip) ctx.scale(-1, 1);
+  ctx.drawImage(img, -8, -8, 16, 16);
+  ctx.restore();
+}
+function text(str, x, y, color = C.ink, align = "left") {
+  ctx.fillStyle = color; ctx.textAlign = align; ctx.textBaseline = "top"; ctx.font = "8px Silkscreen, monospace";
+  ctx.fillText(str, x, y);
+}
+const mix = (a, b, t) => `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(",")})`;
+
+function drawBackdrop() {
+  const th = THEMES[shift];
+  for (let y = HUD; y < GY; y += 4) { ctx.fillStyle = mix(th.skyTop, th.skyLow, (y - HUD) / (GY - HUD)); ctx.fillRect(0, y, W, 4); }
+  if (th.stars) for (let i = 0; i < 60; i++) {
+    const x = (hash(i, 1) % W + W - (camX * 0.02) % W) % W, y = HUD + 2 + hash(i, 2) % 90;
+    ctx.fillStyle = `rgba(255,255,255,${0.3 + (hash(i, 4) % 60) / 100})`; ctx.fillRect(Math.round(x), y, 1, 1);
+  }
+  // Sun and the two moons
+  const sunX = shift === "day" ? 300 : 250, sunY = shift === "day" ? 46 : 132;
+  ctx.fillStyle = th.halo; ctx.beginPath(); ctx.arc(sunX, sunY, shift === "day" ? 12 : 26, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = th.sun; ctx.beginPath(); ctx.arc(sunX, sunY, 4, 0, Math.PI * 2); ctx.fill();
+  const phobos = 380 - ((clock * 3) % 460), deimos = 120 - ((clock * 1.2) % 460);
+  ctx.fillStyle = shift === "day" ? "#e8c7a8" : "#c9c3d6";
+  ctx.fillRect(Math.round(phobos), 40, 4, 3); ctx.fillRect(Math.round(phobos) + 1, 39, 2, 1);
+  ctx.fillRect(Math.round((deimos + 460) % 460), 62, 2, 2);
+  // Far: shield volcano and mesas
+  ctx.fillStyle = th.far;
+  for (let x = 0; x < W; x++) {
+    const wx = x + camX * 0.08, m = ((wx % 1400) + 1400) % 1400 - 700;
+    const h = 14 + 40 * Math.exp(-((m / 230) ** 2)) + noise(wx / 40, 11) * 10 + (noise(wx / 90, 12) > 0.72 ? 12 : 0);
+    ctx.fillRect(x, 158 - h, 1, h + 2);
+  }
+  // Terraformer towers, still blinking
+  for (let k = Math.floor(camX * 0.2 / 300) - 1; k < Math.floor((camX * 0.2 + W) / 300) + 1; k++) {
+    const x = Math.round(k * 300 + 140 + (hash(k, 5) % 120) - camX * 0.2);
+    ctx.fillStyle = th.tower;
+    ctx.fillRect(x, 120, 6, 44); ctx.fillRect(x - 4, 132, 14, 4); ctx.fillRect(x - 2, 114, 10, 6); ctx.fillRect(x + 2, 106, 2, 8);
+    ctx.fillRect(x + 10, 146, 10, 18); ctx.fillRect(x + 12, 140, 2, 6);
+    if (Math.sin(clock * 3 + k) > 0.2) { ctx.fillStyle = th.towerLit; ctx.fillRect(x + 2, 105, 2, 2); }
+  }
+  // Mid ridges and near rocks
+  ctx.fillStyle = th.mid;
+  for (let x = 0; x < W; x++) { const wx = x + camX * 0.3; const h = 10 + noise(wx / 50, 21) * 16 + noise(wx / 14, 22) * 4; ctx.fillRect(x, 180 - h, 1, h + 20); }
+  ctx.fillStyle = th.near;
+  for (let x = 0; x < W; x++) { const wx = x + camX * 0.6; const h = 3 + noise(wx / 18, 31) * 9; ctx.fillRect(x, GY - h, 1, h); }
+}
+
+function craterDepth(wx) {
+  for (const c of craters) if (wx >= c.x && wx < c.x + c.w) return { d: Math.round(Math.sin(Math.PI * (wx - c.x) / c.w) * 12), c };
+  return null;
+}
+function drawRoad() {
+  const th = THEMES[shift];
+  for (let x = 0; x < W; x++) {
+    const wx = Math.floor(camX) + x, hole = craterDepth(wx), top = GY + (hole ? hole.d : 0);
+    if (hole) { ctx.fillStyle = hole.c.fresh ? "#ffb070" : th.hole; ctx.fillRect(x, GY, 1, top - GY); }
+    ctx.fillStyle = th.roadTop; ctx.fillRect(x, top, 1, 1);
+    ctx.fillStyle = th.road; ctx.fillRect(x, top + 1, 1, 3);
+    for (let y = top + 4; y < H; y += 2) { ctx.fillStyle = th.strata[(hash(wx >> 1, (y - GY) >> 2) % 7 === 0 ? 2 : ((y - GY) >> 3)) % 4]; ctx.fillRect(x, y, 1, 2); }
+  }
+}
+
+function drawHud() {
+  ctx.fillStyle = C.void; ctx.fillRect(0, 0, W, HUD);
+  ctx.fillStyle = C.line; ctx.fillRect(0, HUD - 1, W, 1);
+  text("SCORE", 4, 3, C.dim); text(String(score).padStart(6, "0").replace(/(\d{3})$/, ",$1"), 40, 3, C.rust);
+  text("ROVERS", 96, 3, C.dim);
+  for (let i = 0; i < Math.max(0, rovers); i++) { ctx.fillStyle = C.rust; ctx.fillRect(138 + i * 8, 5, 6, 3); ctx.fillRect(139 + i * 8, 4, 3, 1); ctx.fillStyle = C.ink; ctx.fillRect(138 + i * 8, 8, 2, 2); ctx.fillRect(142 + i * 8, 8, 2, 2); }
+  const sec = Math.floor(beaconNo / 5) % 5, idx = (beaconNo % 5) + 1;
+  text("BEACON", 166, 3, C.dim); text(`${sec + 1}-${idx}`, 208, 3, C.rust);
+  text("TIME", 236, 3, C.dim); text(fmt(Math.floor(sectorTime)), 264, 3, sectorTime > PAR ? C.danger : C.ink);
+  // Warning lamps
+  const mineAhead = ground.some((g) => g.kind === "mine" && g.x > camX + W - 40 && g.x < camX + W + 200);
+  const lamps = [["AIR", air.length > 0 || airClock < 1.2], ["MINE", mineAhead], ["REAR", ground.some((g) => g.kind === "dozer" && g.behind)]];
+  lamps.forEach(([s, on], i) => {
+    const x = 300 + i * 39, lit = on && Math.sin(clock * 12) > -0.4;
+    ctx.fillStyle = lit ? C.tech : "#1f1512"; ctx.fillRect(x, 2, 36, 10);
+    text(s, x + 18, 3, lit ? C.void : "#6e5348", "center");
+  });
+  // Route strip: 25 beacons in 5 sectors
+  const x0 = 6, x1 = W - 6, seg = (x1 - x0) / 25;
+  const prog = beaconNo + 1 + Math.min(0.95, (camX - lastBeaconX) / 1200);
+  ctx.fillStyle = C.line; ctx.fillRect(x0, 17, x1 - x0, 2);
+  ctx.fillStyle = C.rust; ctx.fillRect(x0, 17, Math.round(prog * seg), 2);
+  for (let i = 0; i <= 25; i++) {
+    const x = Math.round(x0 + i * seg), major = i % 5 === 0;
+    ctx.fillStyle = i <= beaconNo + 1 ? C.rust : C.dim; ctx.fillRect(x, major ? 14 : 16, 1, major ? 7 : 4);
+  }
+  const mx = Math.round(x0 + prog * seg);
+  ctx.fillStyle = C.ink; ctx.fillRect(mx - 2, 13, 5, 1); ctx.fillRect(mx - 1, 14, 3, 1); ctx.fillRect(mx, 15, 1, 1);
+}
+
+function drawTouch() {
+  for (const [k, b] of Object.entries(TBTN)) {
+    ctx.fillStyle = touch[k] ? "rgba(255,130,67,0.45)" : "rgba(243,229,217,0.14)";
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = "rgba(243,229,217,0.5)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(b.x + 0.5, b.y + 0.5, b.r, 0, Math.PI * 2); ctx.stroke();
+    text(b.s, b.x, b.y - 4, C.ink, "center");
+  }
+}
+
+function draw(demo) {
+  ctx.imageSmoothingEnabled = false;
+  ctx.save();
+  if (shake > 0 && !reduceMotion) ctx.translate(Math.round((Math.random() - 0.5) * 4), Math.round((Math.random() - 0.5) * 3));
+  drawBackdrop();
+  drawRoad();
+  const X = (wx) => wx - camX;
+  for (const g of ground) {
+    const x = X(g.x);
+    if (x < -20 || x > W + 20) continue;
+    if (g.kind === "beacon") { drawSprite("beacon", x, GY - 8); if (Math.sin(clock * 6) > 0) { ctx.fillStyle = C.tech; ctx.fillRect(Math.round(x) - 1, GY - 19, 2, 2); } }
+    else if (g.kind === "ice") drawSprite("ice", x, GY - 36 + Math.sin(clock * 3 + g.x) * (reduceMotion ? 0 : 1.5));
+    else if (g.kind === "mine") drawSprite("mine", x, GY - 6);
+    else if (g.kind === "boulder") {
+      drawSprite("boulder", x, GY - 8);
+      if (g.big && g.hp > 1) { ctx.fillStyle = C.rust; ctx.fillRect(Math.round(x) - 3, GY - 20, 7, 1); ctx.fillRect(Math.round(x) - 3, GY - 22, 7, 1); }
+    } else drawSprite(g.kind, x, GY - 8);
+    if (g.hit > 0) { ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,255,255,0.6)"; ctx.fillRect(Math.round(x) - 8, GY - 16, 16, 16); ctx.globalCompositeOperation = "source-over"; }
+  }
+  ctx.fillStyle = C.tech; for (const s of shells) ctx.fillRect(Math.round(X(s.x)) - 2, s.y, 4, 2);
+  for (const a of air) drawSprite(a.kind, a.x, a.y);
+  for (const d of drops) {
+    if (d.kind === "charge") { ctx.fillStyle = C.danger; ctx.fillRect(Math.round(d.sx) - 2, Math.round(d.y) - 2, 4, 4); ctx.fillStyle = "#ffd27a"; ctx.fillRect(Math.round(d.sx) - 1, Math.round(d.y) - 1, 2, 2); }
+    else { ctx.fillStyle = C.tech; ctx.fillRect(Math.round(d.sx), Math.round(d.y), 2, 3); }
+  }
+  // Rover
+  const sx = roverSX();
+  if (!rover.dead && (rover.blink <= 0 || Math.sin(clock * 30) > 0)) {
+    const bob = rover.tilt > 0 ? 1 : rover.y === 0 && Math.sin(camX * 0.35) > 0.6 ? -1 : 0;
+    drawSprite("player", sx, GY - 8 - rover.y + bob);
+  }
+  ctx.fillStyle = C.shot;
+  for (const s of shots) { ctx.fillRect(Math.round(X(s.x)) - 3, Math.round(s.y), 5, 2); ctx.fillStyle = C.rust; ctx.fillRect(Math.round(X(s.x)) - 6, Math.round(s.y), 3, 2); ctx.fillStyle = C.shot; }
+  for (const u of ups) { ctx.fillRect(Math.round(u.sx), Math.round(u.y), 2, 5); }
+  for (const p of parts) { ctx.fillStyle = p.c; ctx.globalAlpha = Math.min(1, p.life * 2); ctx.fillRect(Math.round(X(p.x)), Math.round(p.y), 2, 2); }
+  ctx.globalAlpha = 1;
+  for (const p of pops) text(p.s, X(p.x), p.y - p.t * 16, C.ink, "center");
+  ctx.restore();
+
+  drawHud();
+  if (banner) {
+    ctx.fillStyle = "rgba(7,4,3,0.82)"; ctx.fillRect(W / 2 - 118, 34, 236, 26);
+    ctx.fillStyle = C.rust; ctx.fillRect(W / 2 - 118, 34, 236, 1);
+    text(banner.a, W / 2, 38, C.rust, "center"); text(banner.b, W / 2, 49, C.ink, "center");
+  }
+  if (rover.dead && rovers >= 0) text(`ROVER LOST  ·  ${Math.max(0, rovers)} LEFT`, W / 2, 96, C.ink, "center");
+  if (showTouch) drawTouch();
+  else {
+    ctx.fillStyle = "rgba(7,4,3,0.7)"; ctx.fillRect(0, H - 12, W, 12);
+    text(demo ? "DEMO  ·  CLICK TO DRIVE" : "← → SPEED  ·  ↑ JUMP  ·  Z FIRE", W / 2, H - 10, C.dim, "center");
+  }
+}
+
+// Input wiring
+const KEYMAP = { arrowleft: "left", a: "left", arrowright: "right", d: "right", arrowup: "jump", w: "jump", " ": "jump", z: "fire", j: "fire", x: "fire" };
+cv.addEventListener("keydown", (ev) => {
+  const k = KEYMAP[ev.key.toLowerCase()];
+  if (!k) return;
+  ev.preventDefault(); lastInput = performance.now();
+  if (k === "jump" && !ev.repeat) jumpQueued = true;
+  if (k !== "jump") keys.add(k);
+});
+cv.addEventListener("keyup", (ev) => { const k = KEYMAP[ev.key.toLowerCase()]; if (k) keys.delete(k); });
+cv.addEventListener("blur", () => { keys.clear(); mouseFire = false; });
+cv.addEventListener("contextmenu", (ev) => ev.preventDefault());
+const toCanvas = (ev) => { const r = cv.getBoundingClientRect(); return { x: ((ev.clientX - r.left) / r.width) * W, y: ((ev.clientY - r.top) / r.height) * H }; };
+const touchPointers = new Map();
+function touchHit(p) {
+  for (const [k, b] of Object.entries(TBTN)) if (Math.hypot(p.x - b.x, p.y - b.y) < b.r + 8) return k;
+  return null;
+}
+function syncTouch() { for (const k in touch) touch[k] = false; for (const k of touchPointers.values()) if (k) touch[k] = true; }
+cv.addEventListener("pointerdown", (ev) => {
+  cv.focus(); lastInput = performance.now();
+  if (ev.pointerType === "touch") {
+    if (!showTouch) setTouch(true);
+    const k = touchHit(toCanvas(ev));
+    touchPointers.set(ev.pointerId, k);
+    if (k === "jump") jumpQueued = true;
+    syncTouch(); return;
+  }
+  if (ev.button === 2) jumpQueued = true; else mouseFire = true;
+});
+const endPointer = (ev) => { if (touchPointers.delete(ev.pointerId)) syncTouch(); if (ev.pointerType !== "touch") mouseFire = false; };
+window.addEventListener("pointerup", endPointer);
+window.addEventListener("pointercancel", endPointer);
+window.addEventListener("gamepadconnected", () => { lastInput = performance.now(); });
+
+function setTouch(on) {
+  showTouch = on;
+  document.querySelectorAll("[data-touch]").forEach((b) => b.setAttribute("aria-pressed", String((b.dataset.touch === "on") === on)));
+}
+document.querySelectorAll("[data-touch]").forEach((b) => b.addEventListener("click", () => setTouch(b.dataset.touch === "on")));
+document.querySelectorAll("[data-shift]").forEach((btn, _, all) => btn.addEventListener("click", () => {
+  shift = btn.dataset.shift;
+  all.forEach((x) => x.setAttribute("aria-pressed", String(x === btn)));
+}));
+
+// Run a few seconds of the demo up front so the first frame already shows a road in use.
+for (let i = 0; i < 240; i++) step(1 / 60, autopilot());
+requestAnimationFrame(frame);
+</script>

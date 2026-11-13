@@ -1,0 +1,12 @@
+{
+  "player": {"subjects": ["planet rover", "dune buggy", "off-road vehicle"], "picks": [384872, 384845, 384850, 384859, 384868, 929134, 929141, 929150], "browse": 32, "chosen": 384845, "mirror": true},
+  "scout": {"subjects": ["drone", "space probe"], "picks": [378911, 378900, 378907, 378909, 378915, 378917, 378919, 378921], "browse": 32, "chosen": 378900},
+  "bomber": {"subjects": ["flying saucer", "dropship"], "picks": [474249, 474236, 474238, 474243, 474250, 474252, 474255, 474263], "browse": 32, "chosen": 474249},
+  "diver": {"subjects": ["satellite", "giant wasp"], "picks": [1056016, 1056018, 1056022, 1056026, 1056029, 1056031, 1056032, 1056043], "browse": 32, "chosen": 1056016},
+  "harvester": {"subjects": ["combine harvester", "army tank", "mech walker"], "picks": [273711, 273716, 273717, 273727, 273731, 34526, 34546, 767498], "browse": 32, "chosen": 34546},
+  "dozer": {"subjects": ["bulldozer", "excavator"], "picks": [159353, 159350, 159352, 159356, 159360, 159363, 159370, 159376], "browse": 32, "chosen": 159353, "mirror": true},
+  "boulder": {"subjects": ["boulder", "rock"], "picks": [127931, 1014288, 1014287, 127916, 127927, 1014281, 127912, 1014309], "browse": 32, "chosen": 127931},
+  "mine": {"subjects": ["landmine", "proximity mine"], "picks": [696006, 696000, 696010, 696014, 696016, 696025, 695997, 696012], "browse": 32, "chosen": 696014},
+  "beacon": {"subjects": ["signal beacon", "space beacon"], "picks": [1107015, 1107012, 1107014, 1107016, 1107028, 1107031, 1154001, 1154005], "browse": 32, "chosen": 1107015},
+  "ice": {"subjects": ["ice crystal", "ice shard"], "picks": [635163, 635143, 635152, 635158, 635160, 635169, 637482, 637496], "browse": 32, "chosen": 635163}
+}
