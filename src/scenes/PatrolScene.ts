@@ -3,10 +3,12 @@ import {
   COURSE, DEBRIS, DUSK_SPEEDUP, ENEMY, FONT, GROUND_Y, HUD_H, HUD_STATE, MIRROR, POINTS, RENDER_SCALE, ROVER, SCORING, SECTORS, SHOT,
   TEXT, WIDTH, COLORS, type AirKind, type SpriteKey,
 } from '../config';
+import { DEMO_SECS } from '../attract';
 import { Backdrop } from '../backdrop';
 import { Controls, type ControlState } from '../controls';
 import { Effects } from '../effects';
 import { generateSector, rng, type CourseItem, type SectorCourse } from '../course';
+import { loadHi, saveHi } from '../hi';
 import { playSound, toggleMute } from '../sfx';
 import { touchButtons } from '../touch';
 import { fitCamera } from '../view';
@@ -78,6 +80,15 @@ export class PatrolScene extends Phaser.Scene {
   private invulnerable = 0;
   private over = false;
   private overAt = 0;
+  /** Paused: the patrol doesn't step and the HUD shows RESUME and TITLE. */
+  paused = false;
+  private hi = 0;
+  private newHi = false;
+  /** Attract mode: this demo's seed (the next demo uses the one after). */
+  private demoSeed = -1;
+  private demoOver = false;
+  /** Dev: demos started since the page loaded (attract mode). */
+  static demos = 0;
   private banner: Banner = { id: 0, title: '', sub: '', ms: 0 };
   private lampWas = { air: false, mine: false, rear: false };
 
@@ -94,16 +105,26 @@ export class PatrolScene extends Phaser.Scene {
     super('patrol');
   }
 
-  create() {
+  /** `attract` (a seed) runs a demo: the autopilot from a sector and shift picked by the seed. */
+  create(data: { attract?: number } = {}) {
+    const demo = data.attract !== undefined;
     Object.assign(this, {
       camX: 0, speed: ROVER.cruise, roverY: 0, roverVy: 0, landed: 0, clock: 0, score: 0, lives: ROVER.lives, extraIdx: 0, lap: 0,
       itemIdx: 0, pendingDozers: [], beaconsPassed: 0, respawnX: 0, sectorTime: 0, airClock: 4, airRand: rng(Date.now()),
       fireCool: 0, deadFor: 0, invulnerable: 0, over: false, overAt: 0, banner: { id: 0, title: '', sub: '', ms: 0 },
       lampWas: { air: false, mine: false, rear: false },
       ground: [], air: [], craters: [], shots: [], ups: [], shells: [], drops: [], popups: [],
+      paused: false, hi: loadHi(), newHi: false, demoSeed: demo ? data.attract : -1, demoOver: false,
     });
+    // A restart from the pause menu mustn't leave the clocks stopped.
+    this.time.paused = false;
+    this.tweens.resumeAll();
+    if (demo) {
+      PatrolScene.demos++;
+      this.airRand = rng(this.demoSeed);
+    }
     fitCamera(this, RENDER_SCALE);
-    this.scene.launch('hud');
+    if (!this.scene.isActive('hud')) this.scene.launch('hud');
     if (!this.textures.exists(PX)) {
       const g = this.make.graphics({}, false);
       g.fillStyle(0xffffff).fillRect(0, 0, 2, 2);
@@ -124,29 +145,88 @@ export class PatrolScene extends Phaser.Scene {
       alpha: { start: 1, end: 0 },
     }).setDepth(14);
 
-    this.controls = new Controls(this);
-    touchButtons.show(true);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => touchButtons.show(false));
+    if (!demo) {
+      this.controls = new Controls(this);
+      touchButtons.show(true);
+    }
     this.events.on('continue', () => this.continueRun());
     this.events.on('title', () => this.toTitle());
-    this.startSector(0, 0, 0);
+    this.events.on('pause', (on: boolean) => this.setPaused(on));
+    // A phone call, a tab switch or the screen locking pauses the patrol.
+    const hidden = () => { if (document.hidden) this.setPaused(true); };
+    if (!demo) document.addEventListener('visibilitychange', hidden);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      touchButtons.show(false);
+      document.removeEventListener('visibilitychange', hidden);
+      for (const e of ['continue', 'title', 'pause']) this.events.off(e);
+    });
+    if (demo) this.startSector(this.demoSeed % SECTORS.length, Math.floor(this.demoSeed / SECTORS.length) % 2, 0);
+    else this.startSector(0, 0, 0);
     this.cameras.main.fadeIn(250);
     if (import.meta.env.DEV) Object.assign(window, { __patrol: this });
   }
 
   update(_time: number, delta: number) {
     const dt = Math.min(0.05, delta / 1000);
-    const input = this.controls.read();
+    const demo = this.demoSeed >= 0;
+    const input = demo ? this.pilot() : this.controls.read();
     if (input.mute) toggleMute(this);
+    if (demo && !this.demoOver && (this.over || this.clock > DEMO_SECS)) {
+      // Attract mode: the next demo, from the next seed.
+      this.demoOver = true;
+      this.scene.restart({ attract: (this.demoSeed + 1) % 2 ** 31 });
+      return;
+    }
+    if (this.paused) {
+      if (input.back) return this.toTitle();
+      if (input.pause || input.confirm) this.setPaused(false);
+      touchButtons.show(false);
+      this.writeHud(input);
+      return;
+    }
     if (this.over) {
       if (this.time.now - this.overAt > 800) {
         if (input.confirm) this.continueRun();
         else if (input.back) this.toTitle();
       }
-    } else this.step(dt, input);
+    } else if (input.pause) return this.setPaused(true);
+    else this.step(dt, input);
     this.draw();
     this.fx.update(this.camX, dt);
     this.writeHud(input);
+  }
+
+  /** Pauses or resumes the patrol (not once it's over). Popups and timed banners wait too. */
+  setPaused(on: boolean) {
+    if (this.demoSeed >= 0 || on === this.paused || (on && this.over)) return;
+    this.paused = on;
+    this.time.paused = on;
+    if (on) this.tweens.pauseAll();
+    else this.tweens.resumeAll();
+    playSound(this, 'beacon', { volume: 0.5 });
+    touchButtons.show(!on);
+  }
+
+  /**
+   * Attract mode's driver, from the concept sheet: always firing, cruising, and jumping whatever's coming (craters,
+   * mines, a big boulder too close to finish off, shells, a dozer about to ram). Boosts out from under a diver.
+   */
+  private pilot(): ControlState {
+    const rx = this.roverX(), sx = this.roverSX(), lead = 14 + this.speed * 0.13;
+    const ahead = (x: number) => x - rx;
+    let jump = false, dir = 0;
+    for (const c of this.craters) { const d = ahead(c.x); if (d > 0 && d < lead) jump = true; }
+    for (const g of this.ground) {
+      const d = ahead(g.x);
+      if (g.dead) continue;
+      if (g.kind === 'mine' && d > 0 && d < lead) jump = true;
+      if (g.kind === 'boulder' && g.big && g.hp > 1 && d > 0 && d < 22) jump = true;
+      if (g.kind === 'harvester' && d > 0 && d < 22) jump = true;
+      if (g.kind === 'dozer' && g.behind && d < 0 && d > -26) jump = true;
+    }
+    for (const s of this.shells) { const d = ahead(s.x); if (d > 0 && d < 22) jump = true; }
+    for (const a of this.air) if (a.kind === 'diver' && a.phase! >= 1 && Math.abs(a.x - sx) < 14) dir = 1;
+    return { dir, jump, fire: true, confirm: false, back: false, mute: false, pause: false, device: 'kbm' };
   }
 
   // ---- Course ----
@@ -576,14 +656,18 @@ export class PatrolScene extends Phaser.Scene {
     this.over = true;
     this.overAt = this.time.now;
     this.deadFor = 0;
+    if (this.demoSeed >= 0) return;
+    this.newHi = saveHi(this.score);
+    if (this.newHi) this.hi = this.score;
     playSound(this, 'gameOver');
-    this.showBanner('GAME OVER', `SCORE ${pts(this.score)}`, 0);
+    this.showBanner(this.newHi ? 'NEW HIGH SCORE!' : 'GAME OVER', `SCORE ${pts(this.score)}${this.newHi ? '' : `  ·  HI ${pts(this.hi)}`}`, 0);
   }
 
   /** Continue: the same sector from its start, a full set of rovers, and the score back at zero. */
   private continueRun() {
     if (!this.over) return;
     this.over = false;
+    this.newHi = false;
     this.clearAll();
     this.score = 0;
     this.extraIdx = 0;
@@ -600,6 +684,8 @@ export class PatrolScene extends Phaser.Scene {
   }
 
   private toTitle() {
+    // Leaving mid-run still counts toward the high score.
+    if (!this.over && saveHi(this.score)) this.hi = this.score;
     this.scene.stop('hud');
     this.scene.start('title');
   }
@@ -733,6 +819,7 @@ export class PatrolScene extends Phaser.Scene {
       time: this.sectorTime, par: this.course.par,
       lamps, progress: this.course.index * COURSE.beaconsPerSector + this.beaconsPassed + along,
       dusk: this.lap > 0, banner: this.banner,
+      paused: this.paused, attract: this.demoSeed >= 0,
     };
     this.registry.set(HUD_STATE, hud);
   }

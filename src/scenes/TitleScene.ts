@@ -1,7 +1,9 @@
 import Phaser from 'phaser';
 import { FONT, MIRROR, RENDER_SCALE, SECTORS, SPRITES, TEXT, WIDTH, type SpriteKey } from '../config';
 import { Backdrop } from '../backdrop';
+import { ATTRACT, attractSeed } from '../attract';
 import { Controls } from '../controls';
+import { loadHi } from '../hi';
 import { playSound, registerSounds, restoreMute, toggleMute } from '../sfx';
 import { fitCamera } from '../view';
 
@@ -26,6 +28,8 @@ export class TitleScene extends Phaser.Scene {
   }
 
   create() {
+    // Attract mode goes straight to a patrol once the sprites are loaded.
+    if (ATTRACT) return void this.scene.start('patrol', { attract: attractSeed() });
     this.leaving = false;
     this.padStatus = undefined;
     this.controls = new Controls(this);
@@ -46,6 +50,8 @@ export class TitleScene extends Phaser.Scene {
     text(cx, 10, 'A ROVER PATROL FROM CHRYSE FLATS TO OLYMPUS', 8, TEXT.dim);
     text(cx, 20, 'MARS PATROL', 24, TEXT.rust);
     text(cx, 48, 'JUMP THE CRATERS. SHOOT THE MACHINES. BEAT PAR.', 8, TEXT.ink);
+    const hi = loadHi();
+    if (hi) text(WIDTH - 40, 4, `HI ${hi.toLocaleString('en-US')}`, 8, TEXT.rust);
 
     text(70, 64, 'YOU', 8, TEXT.dim);
     sprite('player', 70, 84);
@@ -65,11 +71,11 @@ export class TitleScene extends Phaser.Scene {
       this.add.text(x + 4, 158, actions, { fontFamily: FONT, fontSize: '8px', color: TEXT.dim, lineSpacing: 2 }).setDepth(5);
     };
     if (touchScreen) {
-      column(cx, 'TOUCH', 'LEFT THUMB\nRIGHT THUMB\nTAP', '◀ ▶ SPEED\nJUMP + FIRE\nSOUND, BOTTOM RIGHT');
+      column(cx, 'TOUCH', 'LEFT THUMB\nRIGHT THUMB\nTAP', '◀ ▶ SPEED\nJUMP + FIRE\nPAUSE, SOUND: BOTTOM RIGHT');
       return;
     }
-    column(112, 'KEYBOARD + MOUSE', '← →\n↑ / SPACE\nZ / CLICK\nM', 'BRAKE / BOOST\nJUMP\nFIRE\nSOUND ON/OFF');
-    column(304, 'CONTROLLER', 'L-STICK\nA\nX / RT\nY', 'BRAKE / BOOST\nJUMP\nFIRE\nSOUND ON/OFF');
+    column(112, 'KEYBOARD + MOUSE', '← →\n↑ / SPACE\nZ / CLICK\nP / ESC\nM', 'BRAKE / BOOST\nJUMP\nFIRE\nPAUSE\nSOUND ON/OFF');
+    column(304, 'CONTROLLER', 'L-STICK\nA\nX / RT\nSTART\nY', 'BRAKE / BOOST\nJUMP\nFIRE\nPAUSE\nSOUND ON/OFF');
     this.padStatus = text(cx, 214, '', 8, TEXT.dim);
   }
 

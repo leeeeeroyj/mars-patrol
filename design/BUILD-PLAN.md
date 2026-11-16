@@ -34,7 +34,7 @@ Vite 8 + Phaser 4 + TypeScript, copied from Space Raider (`package.json`, `tscon
 
 The game camera doesn't scroll. The scene keeps `camX` (distance driven) and places world things at `x - camX`, which keeps the HUD, air enemies (screen space) and parallax simple.
 
-## Status (2026-11-13)
+## Status (2026-11-16)
 
 **v1 is complete.** All seven milestones are done, and the game is deployed to GitHub Pages from `leeeeeroyj/mars-patrol`.
 
@@ -58,6 +58,12 @@ The game camera doesn't scroll. The scene keeps `camX` (distance driven) and pla
 - **Dusk laps:** each lap is laid out from a new seed (the seed includes the lap), and a retry within a lap repeats its layout. You chose to keep this.
 - **The name:** keep "Mars Patrol". It's a non-commercial hobby game with no plans to monetize.
 - **Account security:** the GitHub account signs in with a passkey.
+
+**Pause, high score and attract mode (2026-11-16)**
+- **Pause:** P, Esc, a controller's Start, or **II PAUSE** on touch (bottom strip, left of SOUND); the page going to the background pauses too. The panel (RESUME, TITLE) is drawn by the HUD from `HudState.paused`. Pausing stops the scene clock and tweens; `create()` resets both so a restart from the panel can't leave them stopped. Start still confirms on game over.
+- **High score:** `src/hi.ts` keeps one number in `mars-patrol-hi` (what Arcadia's cabinet reads), saved at game over and when leaving a run for the title. The title shows HI; game over shows NEW HIGH SCORE! or the high score.
+- **Attract mode:** `?attract` (`src/attract.ts`) skips the title and runs `PatrolScene` with `pilot()`, the concept sheet's autopilot (always firing; jumps craters, mines, unfinished big boulders, harvesters, shells and dozers; boosts out from under a diver). The seed picks the sector and day or dusk, and seeds air spawns. Game over or 45 s starts the next demo (the next seed). No input plugins, no audio context, no storage writes; the HUD drops the hint, PAUSE, SOUND and game-over prompts. Scene event listeners are now removed on shutdown, since attract restarts the scene.
+- **Tests:** `tools/cdp.mjs` (from Pro Racer Z). `tools/pause-hi-test.mjs` 14/14. `tools/attract-test.mjs` 14/14: gameplay at 1.3 s, shooting at 2.3 s, a new demo with no input, no sound, no AudioContext, keys / click / a fake gamepad change nothing, no storage writes, heap +1.4 %, full game area at 320 × 176 and 832 × 456. Over four 45 s demos the pilot lost one rover each and scored 1,300–3,850.
 
 **Next (post-v1, pick any):** a high-score table, rolling boulders, dust storms that cut visibility, a boss at Olympus, music. Bring the balance numbers above back in when real play shows a problem.
 

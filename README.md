@@ -37,6 +37,8 @@ The rover drives itself. Brake or boost to set its speed, jump over what's on th
 - **Finish the route** for a 5,000 bonus. Then the Dusk shift begins: the five sectors again with a new layout, the machines 25% faster each lap and hazards closer together.
 - **Watch the lamps.** **AIR** lights up when something is coming from above, **MINE** when seed charges are ahead, and **REAR** when a dozer is coming up behind you.
 - **Rovers:** you start with 3 and get an extra one at 10,000, 30,000 and 60,000 points. At game over you can continue from the start of the sector, with a full set of rovers and the score back at zero.
+- **High score:** your best is kept in this browser and shown on the title. Game over says so when you beat it, and leaving a run for the title counts too.
+- **Attract mode:** add `?attract` to the address for a silent demo that drives, jumps and shoots by itself from a different sector each time, and ignores input. `?attract&seed=<n>` repeats the same demos.
 
 | On the road | Jumped | Shot | Behaviour |
 | --- | ---: | ---: | --- |
@@ -63,10 +65,11 @@ Your upward shots also destroy falling pellets and charges.
 | Brake / boost | ← → or A D | Left stick or D-pad | ◀ ▶ |
 | Jump | ↑, W, Space or right click | A | **JUMP** |
 | Fire | Z, J, X or left click | X, RT or RB | **FIRE** |
+| Pause | P or Esc | Start | Tap **II PAUSE** (bottom right) |
 | Sound on / off | M | Y | Tap **SOUND** (bottom right) |
 | After game over | Enter to continue, Esc for the title | A to continue, B for the title | **CONTINUE** or **TITLE** |
 
-Hold jump to keep jumping. On a phone, turn the screen sideways. On wide screens the touch buttons sit in the empty space beside the game, so they don't cover the road.
+The patrol pauses itself if you switch away. From the pause panel, resume, or go back to the title. Hold jump to keep jumping. On a phone, turn the screen sideways. On wide screens the touch buttons sit in the empty space beside the game, so they don't cover the road.
 
 ## Run it locally
 
@@ -92,10 +95,14 @@ src/
   touch.ts           on-screen touch buttons
   effects.ts         spark bursts, shockwave rings, glows, screen shake
   sfx.ts             procedural sound effects
+  hi.ts              the high score, kept in localStorage
+  attract.ts         the ?attract demo mode's settings
   scenes/            title screen, patrol and HUD
 assets/sprites/      the game's 16 × 16 sprites
 design/              concept sheet and build plan
 tools/sprites.py     sprite search and export script
+tools/cdp.mjs        headless Chrome harness for the tests
+tools/*-test.mjs     checks: pause and high score, the ?attract demo
 ```
 
 ## Credits

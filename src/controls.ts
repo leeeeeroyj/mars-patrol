@@ -12,6 +12,8 @@ export interface ControlState {
   confirm: boolean;
   back: boolean;
   mute: boolean;
+  /** P or Esc on the keyboard, Start on a controller (Start also confirms, for menus). */
+  pause: boolean;
   device: Device;
 }
 
@@ -21,12 +23,12 @@ const TRIGGER_THRESHOLD = 0.3;
 const BTN = { A: 0, B: 1, X: 2, Y: 3, START: 9 } as const;
 const TRACKED = Object.values(BTN);
 
-type KeyName = 'LEFT' | 'RIGHT' | 'UP' | 'A' | 'D' | 'W' | 'SPACE' | 'Z' | 'J' | 'X' | 'M' | 'ENTER' | 'ESC';
+type KeyName = 'LEFT' | 'RIGHT' | 'UP' | 'A' | 'D' | 'W' | 'SPACE' | 'Z' | 'J' | 'X' | 'M' | 'ENTER' | 'ESC' | 'P';
 
 /**
  * One input layer. Keyboard: left/right (or A/D) brake and boost, up/W/space jump, Z/J/X fire, M sound.
  * Mouse: left button fires, right button jumps. Controller: left stick or D-pad brake/boost, A jump, X/RT/RB fire,
- * Y sound. Touch: four buttons (src/touch.ts). The last device used decides which hints are shown.
+ * Y sound. P, Esc or Start pause. Touch: four buttons (src/touch.ts). The last device used decides which hints are shown.
  */
 export class Controls {
   device: Device = window.matchMedia?.('(pointer: coarse)').matches ? 'touch' : 'kbm';
@@ -34,7 +36,7 @@ export class Controls {
   private readonly keys: Record<KeyName, Phaser.Input.Keyboard.Key>;
 
   constructor(private readonly scene: Phaser.Scene) {
-    this.keys = scene.input.keyboard!.addKeys('LEFT,RIGHT,UP,A,D,W,SPACE,Z,J,X,M,ENTER,ESC') as Controls['keys'];
+    this.keys = scene.input.keyboard!.addKeys('LEFT,RIGHT,UP,A,D,W,SPACE,Z,J,X,M,ENTER,ESC,P') as Controls['keys'];
     scene.input.mouse?.disableContextMenu();
     scene.input.on('pointerdown', (p: Phaser.Input.Pointer) => (this.device = p.wasTouch ? 'touch' : 'kbm'));
   }
@@ -55,7 +57,8 @@ export class Controls {
     let confirm = just(k.ENTER) || just(k.SPACE);
     let back = just(k.ESC);
     let mute = just(k.M);
-    if (dir || jump || fire || confirm || back || mute) this.device = 'kbm';
+    let pause = just(k.P) || back;
+    if (dir || jump || fire || confirm || back || mute || pause) this.device = 'kbm';
 
     const pad = this.pad();
     const down = new Set(pad ? TRACKED.filter((i) => pad.buttons[i]?.pressed) : []);
@@ -72,6 +75,7 @@ export class Controls {
       confirm ||= edges.has(BTN.A) || edges.has(BTN.START);
       back ||= edges.has(BTN.B);
       mute ||= edges.has(BTN.Y);
+      pause ||= edges.has(BTN.START);
     }
 
     touchButtons.render();
@@ -82,6 +86,6 @@ export class Controls {
       jump ||= t('jump');
       fire ||= t('fire');
     }
-    return { dir, jump, fire, confirm, back, mute, device: this.device };
+    return { dir, jump, fire, confirm, back, mute, pause, device: this.device };
   }
 }
