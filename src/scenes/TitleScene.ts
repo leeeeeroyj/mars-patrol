@@ -51,7 +51,7 @@ export class TitleScene extends Phaser.Scene {
 
     text(cx, 10, 'A ROVER PATROL FROM CHRYSE FLATS TO OLYMPUS', 8, TEXT.dim);
     text(cx, 20, 'MARS PATROL', 24, TEXT.rust);
-    text(cx, 48, 'JUMP THE CRATERS. SHOOT THE MACHINES. BEAT PAR.', 8, TEXT.ink);
+    text(cx, 48, 'JUMP THE CRATERS. SHOOT THE MACHINES. MIND THE MINES.', 8, TEXT.ink);
     const hi = loadHi();
     if (hi) text(WIDTH - 40, 4, `HI ${hi.toLocaleString('en-US')}`, 8, TEXT.rust);
 

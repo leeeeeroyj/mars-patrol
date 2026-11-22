@@ -20,9 +20,8 @@ export interface HudState {
   over: boolean;
   /** The next beacon, as "sector-beacon". */
   next: string;
-  /** Seconds on the sector clock, and the sector's par. */
-  time: number;
-  par: number;
+  /** Speed multiplier for points: 1, 2 or 3. */
+  mult: number;
   lamps: { air: boolean; mine: boolean; rear: boolean };
   /** Beacons along the whole route, 0..25 with fractions. */
   progress: number;
@@ -49,13 +48,12 @@ const HINTS: Record<Device, string> = {
 };
 
 const pts = (n: number) => String(n).padStart(6, '0').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 /** Top bar, warning lamps, route strip, banners and hint strip, drawn over the road at twice its resolution. */
 export class HudScene extends Phaser.Scene {
   private score!: Phaser.GameObjects.Text;
   private next!: Phaser.GameObjects.Text;
-  private clockText!: Phaser.GameObjects.Text;
+  private multText!: Phaser.GameObjects.Text;
   private extra!: Phaser.GameObjects.Text;
   private lampText: Phaser.GameObjects.Text[] = [];
   private dynamic!: Phaser.GameObjects.Graphics;
@@ -99,8 +97,8 @@ export class HudScene extends Phaser.Scene {
     this.extra = label(0, 4, '', TEXT.rust);
     label(372, 4, 'NEXT');
     this.next = label(432, 4, '', TEXT.rust);
-    label(478, 4, 'TIME');
-    this.clockText = label(532, 4, '');
+    label(478, 4, 'SPEED');
+    this.multText = label(548, 4, '');
     this.lampText = LAMPS.map(([, name], i) => label(600 + i * 78 + 36, 5, name, TEXT.off).setOrigin(0.5, 0));
     this.dynamic = this.add.graphics();
     this.children.bringToTop(this.lampText[0]);
@@ -159,7 +157,7 @@ export class HudScene extends Phaser.Scene {
     if (!s) return;
     this.score.setText(pts(s.score));
     this.next.setText(s.next);
-    this.clockText.setText(fmt(s.time)).setColor(s.time > s.par ? TEXT.danger : TEXT.ink);
+    this.multText.setText(`x${s.mult}`).setColor(s.mult >= 3 ? TEXT.gold : s.mult === 2 ? TEXT.ink : TEXT.dim);
 
     if (s.lives !== this.shownLives) {
       this.shownLives = s.lives;

@@ -32,6 +32,7 @@ export const TEXT = {
   tech: '#4fdcc8',
   danger: '#ff5160',
   off: '#6e5348',
+  gold: '#ffd27a',
 };
 
 /** Sprite slots exported by tools/sprites.py to assets/sprites/<slot>.png. */
@@ -48,6 +49,15 @@ export const ROVER = {
   lives: 3, invulnerableMs: 1600, respawnDelayMs: 1400,
 };
 export const SHOT = { forwardSpeed: 230, range: 150, cooldown: 0.24, upSpeed: 260, maxUp: 3 };
+/**
+ * The cannon heats up: each trigger pull adds `perShot` (0..1) and it cools at `coolPerSec`. At 1 it jams for `jamSec`
+ * while the gauge drains. Holding fire jams it in about 2 s; tapping about twice a second never does.
+ */
+export const HEAT = { perShot: 0.22, coolPerSec: 0.45, jamSec: 1 };
+/** An ice core vents the cannon and gives `secs` of overdrive: no heat, fire twice as fast, two forward shots in flight. */
+export const OVERDRIVE = { secs: 3, cooldownScale: 0.5 };
+/** Points for kills, jumps and pickups are multiplied by speed: braking, cruising or boosting. Bonuses aren't. */
+export const MULTIPLIER = { brake: 1, cruise: 2, boost: 3, band: 8 };
 
 /** Points: `jump` for clearing it, `kill` for shooting it. */
 export const POINTS = {
@@ -55,12 +65,13 @@ export const POINTS = {
   /** A big boulder: `chip` for the first hit, which breaks it down to a boulder, then a boulder's `kill`. */
   boulder: { jump: 100, kill: 100, chip: 100 },
   roller: { jump: 100, kill: 150 },
-  mine: { jump: 50 },
+  /** `defuse`: shooting an armed mine out of the air. */
+  mine: { jump: 50, defuse: 300 },
   harvester: { jump: 100, kill: 300 },
   dozer: { jump: 100, kill: 200 },
   ice: 250,
 };
-export const SCORING = { sectorBonus: 1000, perSecondUnderPar: 100, routeBonus: 5000, extraRoversAt: [10000, 30000, 60000] };
+export const SCORING = { sectorBonus: 1000, routeBonus: 5000, extraRoversAt: [20000, 50000, 100000] };
 
 export const ENEMY = {
   /** Each of the three hovers around its own screen x, weaving across the rover so its pellets and your shots can meet. */
@@ -75,6 +86,12 @@ export const ENEMY = {
   chargeCrater: 16,
   /** Big boulders are drawn at `bigScale` and hit within `reach` of the rover and below `height`; the first hit breaks one down to a boulder. */
   bigBoulder: { bigScale: 1.5, reach: 12, height: 16 },
+  /**
+   * A shot arms a mine: after `fuse` s it leaps (`leap` px/s up, under `gravity`) to hang over the rover, then drops on it
+   * keeping pace with the rover's speed at the leap. It blows up on landing, killing a rover on the road within `blast`
+   * px. Shoot it down as it drops, or brake or boost as it leaps so it lands short or long.
+   */
+  mine: { fuse: 0.4, leap: 260, gravity: 480, blast: 12 },
   /** Rolling boulders roll in from the right at `speed` (ground px/s), hopping up to `bounce` px, `hops` times a second. */
   roller: { speed: 40, bounce: 3, hops: 2.2 },
 };
@@ -82,10 +99,22 @@ export const ENEMY = {
 export type GroundKind = 'crater' | 'boulder' | 'bigBoulder' | 'roller' | 'mine' | 'mineField' | 'harvester' | 'dozer' | 'ice';
 export type AirKind = 'scouts' | 'bomber' | 'diver';
 
+/**
+ * A stretch of road between two beacons, built as one set piece:
+ * `intro` shows the sector's new hazards alone with room to read them; `breather` is sparse; `gauntlet` is dense and
+ * mixed; `mineRun` is mines and mine pairs (tempting to shoot); `airRaid` is a quiet road under scripted air waves.
+ * Every stretch floats an ice core over one of its hazards, so grabbing it means jumping at a risky moment.
+ */
+export type Stretch = 'intro' | 'breather' | 'gauntlet' | 'mineRun' | 'airRaid';
+
 export interface Sector {
   name: string;
   /** Hazards that can appear, with relative weights. */
   ground: Partial<Record<GroundKind, number>>;
+  /** What this sector adds: its intro stretch shows only these. */
+  introduces: GroundKind[];
+  /** One set piece per beacon. */
+  stretches: Stretch[];
   air: AirKind[];
   /** Seconds between air waves. */
   airEvery: number;
@@ -94,24 +123,39 @@ export interface Sector {
 }
 
 export const SECTORS: Sector[] = [
-  { name: 'CHRYSE FLATS', ground: { crater: 4, boulder: 3, ice: 1 }, air: ['scouts'], airEvery: 9, look: { far: 0, volcano: 0.3 } },
-  { name: 'ARES VALLIS', ground: { crater: 4, boulder: 3, harvester: 2, ice: 1 }, air: ['scouts', 'bomber'], airEvery: 8, look: { far: 1, volcano: 0.2 } },
-  { name: 'THARSIS RISE', ground: { crater: 3, boulder: 2, bigBoulder: 2, roller: 2, mine: 2, mineField: 1, harvester: 1, ice: 1 }, air: ['scouts', 'bomber'], airEvery: 7.5, look: { far: 2, volcano: 0.6 } },
-  { name: 'NOCTIS LABYRINTH', ground: { crater: 3, boulder: 2, bigBoulder: 1, roller: 1, mine: 2, harvester: 2, dozer: 2, ice: 1 }, air: ['scouts', 'diver', 'bomber'], airEvery: 7, look: { far: 3, volcano: 0.4 } },
-  { name: 'OLYMPUS APPROACH', ground: { crater: 3, boulder: 2, bigBoulder: 2, roller: 2, mine: 2, mineField: 1, harvester: 2, dozer: 2, ice: 1 }, air: ['scouts', 'diver', 'bomber'], airEvery: 6, look: { far: 4, volcano: 1 } },
+  {
+    name: 'CHRYSE FLATS', ground: { crater: 4, boulder: 3 }, introduces: ['crater', 'boulder'],
+    stretches: ['intro', 'breather', 'gauntlet'], air: ['scouts'], airEvery: 9, look: { far: 0, volcano: 0.3 },
+  },
+  {
+    name: 'ARES VALLIS', ground: { crater: 3, boulder: 2, mine: 3, mineField: 1 }, introduces: ['mine'],
+    stretches: ['intro', 'mineRun', 'gauntlet'], air: ['scouts', 'bomber'], airEvery: 8, look: { far: 1, volcano: 0.2 },
+  },
+  {
+    name: 'THARSIS RISE', ground: { crater: 3, boulder: 2, bigBoulder: 2, roller: 2, mine: 2, mineField: 1 }, introduces: ['roller', 'bigBoulder'],
+    stretches: ['intro', 'gauntlet', 'airRaid'], air: ['scouts', 'bomber'], airEvery: 7.5, look: { far: 2, volcano: 0.6 },
+  },
+  {
+    name: 'NOCTIS LABYRINTH', ground: { crater: 3, boulder: 2, bigBoulder: 1, roller: 1, mine: 2, mineField: 1, harvester: 2, dozer: 2 }, introduces: ['harvester', 'dozer'],
+    stretches: ['intro', 'mineRun', 'gauntlet'], air: ['scouts', 'diver', 'bomber'], airEvery: 7, look: { far: 3, volcano: 0.4 },
+  },
+  {
+    name: 'OLYMPUS APPROACH', ground: { crater: 3, boulder: 2, bigBoulder: 2, roller: 2, mine: 2, mineField: 1, harvester: 2, dozer: 2 }, introduces: [],
+    stretches: ['gauntlet', 'airRaid', 'gauntlet'], air: ['scouts', 'diver', 'bomber'], airEvery: 6, look: { far: 4, volcano: 1 },
+  },
 ];
 
 export const COURSE = {
-  beaconsPerSector: 5,
-  /** Road between two beacons. */
-  segmentLength: 1100,
-  /** Gap between hazards: [min, max] on the Day shift; Dusk laps shrink it. */
-  gap: [120, 175] as const,
+  beaconsPerSector: 3,
+  /** Road between two beacons. Each stretch keeps its first 200 and last 140 clear, so a respawn is always safe. */
+  segmentLength: 900,
+  /** Gap between hazards, [min, max], per set piece on the Day shift; Dusk laps shrink them. */
+  gaps: { intro: [170, 230], breather: [200, 260], gauntlet: [95, 130], mineRun: [110, 150], airRaid: [210, 270] } as Record<Stretch, readonly [number, number]>,
   duskGapScale: 0.82,
   /** A mine pair's spacing. At cruise or brake, any jump that clears the first mine leaves room to clear the second. */
   mineFieldGap: 56,
-  /** Par is the time to drive a sector at this speed. */
-  parSpeed: 88,
+  /** Air waves an air raid sends, spread along its stretch. */
+  raidWaves: 2,
 };
 
 /** Each Dusk lap speeds the machines up by this much (1 = Day speed). */

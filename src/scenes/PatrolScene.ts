@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  COURSE, DEBRIS, DUSK_SPEEDUP, ENEMY, FONT, GROUND_Y, HUD_H, HUD_STATE, MIRROR, POINTS, RENDER_SCALE, ROVER, SCORING, SECTORS, SHOT,
+  COURSE, DEBRIS, DUSK_SPEEDUP, ENEMY, FONT, GROUND_Y, HEAT, HUD_H, HUD_STATE, MIRROR, MULTIPLIER, OVERDRIVE, POINTS, RENDER_SCALE, ROVER, SCORING, SECTORS, SHOT,
   TEXT, WIDTH, COLORS, type AirKind, type SpriteKey,
 } from '../config';
 import { DEMO_SECS } from '../attract';
@@ -29,6 +29,12 @@ type GroundThing = {
   /** Roller: seconds rolling, and how high its hop has it off the road. */
   t?: number;
   lift?: number;
+  /** Mine: armed by a shot; `fuse` counts down to the leap, then it flies with `vx` / `vy` at height `lift`, and drops at `fallVx`. */
+  armed?: boolean;
+  fuse?: number;
+  vx?: number;
+  vy?: number;
+  fallVx?: number;
   dead?: boolean;
 };
 /** Air things live in screen space: they fly over the road rather than sit on it. */
@@ -49,7 +55,6 @@ type Popup = { text: Phaser.GameObjects.Text; x: number };
 
 const PX = 'fx-px';
 const pts = (n: number) => n.toLocaleString('en-US');
-const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 export class PatrolScene extends Phaser.Scene {
   private controls!: Controls;
@@ -76,12 +81,18 @@ export class PatrolScene extends Phaser.Scene {
   private itemIdx = 0;
   private pendingDozers: number[] = [];
   private pendingRollers: number[] = [];
+  /** Air raid waves, sent when the rover reaches their x. */
+  private pendingWaves: CourseItem[] = [];
   private beaconsPassed = 0;
   private respawnX = 0;
-  private sectorTime = 0;
   private airClock = 0;
   private airRand = rng(1);
   private fireCool = 0;
+  /** Cannon heat (0..1), and seconds left jammed. */
+  private heat = 0;
+  private jam = 0;
+  /** Seconds of overdrive left, from an ice core. */
+  private overdrive = 0;
   private deadFor = 0;
   private invulnerable = 0;
   private over = false;
@@ -116,8 +127,8 @@ export class PatrolScene extends Phaser.Scene {
     const demo = data.attract !== undefined;
     Object.assign(this, {
       camX: 0, speed: ROVER.cruise, roverY: 0, roverVy: 0, landed: 0, clock: 0, score: 0, lives: ROVER.lives, extraIdx: 0, lap: 0,
-      itemIdx: 0, pendingDozers: [], pendingRollers: [], beaconsPassed: 0, respawnX: 0, sectorTime: 0, airClock: 4, airRand: rng(Date.now()),
-      fireCool: 0, deadFor: 0, invulnerable: 0, over: false, overAt: 0, banner: { id: 0, title: '', sub: '', ms: 0 },
+      itemIdx: 0, pendingDozers: [], pendingRollers: [], pendingWaves: [], beaconsPassed: 0, respawnX: 0, airClock: 4, airRand: rng(Date.now()),
+      fireCool: 0, heat: 0, jam: 0, overdrive: 0, deadFor: 0, invulnerable: 0, over: false, overAt: 0, banner: { id: 0, title: '', sub: '', ms: 0 },
       lampWas: { air: false, mine: false, rear: false },
       ground: [], air: [], craters: [], shots: [], ups: [], shells: [], drops: [], popups: [],
       paused: false, hi: loadHi(), newHi: false, demoSeed: demo ? data.attract : -1, demoOver: false,
@@ -216,18 +227,21 @@ export class PatrolScene extends Phaser.Scene {
   }
 
   /**
-   * Attract mode's driver, from the concept sheet: always firing, cruising, and jumping whatever's coming (craters,
-   * mines, a big boulder too close to finish off, rollers, shells, a dozer about to ram). Boosts out from under a diver.
+   * Attract mode's driver: cruising, firing at whatever's in range while the cannon is cool enough, and jumping
+   * whatever's coming (craters, mines, a big boulder too close to finish off, rollers, shells, a dozer about to ram).
+   * Boosts out from under a diver.
    */
   private pilot(): ControlState {
     const rx = this.roverX(), sx = this.roverSX(), lead = 14 + this.speed * 0.13;
     const ahead = (x: number) => x - rx;
     let jump = false, dir = 0;
-    for (const c of this.craters) { const d = ahead(c.x); if (d > 0 && d < lead) jump = true; }
+    // Craters: take off so the jump (its length at this speed) lands the same distance past the hole as it left before it.
+    const air = this.speed * ((2 * ROVER.jumpSpeed) / ROVER.gravity);
+    for (const c of this.craters) { const d = ahead(c.x); if (d > -4 && d < Math.max(4, (air - c.w) / 2 + 4)) jump = true; }
     for (const g of this.ground) {
       const d = ahead(g.x);
       if (g.dead) continue;
-      if (g.kind === 'mine' && d > 0 && d < lead) jump = true;
+      if (g.kind === 'mine' && !g.armed && d > 0 && d < lead) jump = true;
       if (g.kind === 'boulder' && g.big && d > 0 && d < 8 + this.speed * 0.29) jump = true;
       if (g.kind === 'roller' && d > 0 && d < 14 + (this.speed + ENEMY.roller.speed * this.dusk()) * 0.13) jump = true;
       if (g.kind === 'harvester' && d > 0 && d < 22) jump = true;
@@ -235,7 +249,18 @@ export class PatrolScene extends Phaser.Scene {
     }
     for (const s of this.shells) { const d = ahead(s.x); if (d > 0 && d < 22) jump = true; }
     for (const a of this.air) if (a.kind === 'diver' && a.phase! >= 1 && Math.abs(a.x - sx) < 14) dir = 1;
-    return { dir, jump, fire: true, confirm: false, back: false, mute: false, pause: false, device: 'kbm' };
+    // Never shoot a mine by accident: hold fire while the next thing on the road is one. Shoot leaping mines down.
+    const next = this.ground.filter((g) => !g.dead && g.kind !== 'beacon' && g.kind !== 'ice' && ahead(g.x) > 0).sort((a, b) => a.x - b.x)[0];
+    const shootable = ['boulder', 'roller', 'harvester', 'dozer'];
+    const leaping = this.ground.some((g) => g.kind === 'mine' && g.fuse !== undefined && g.fuse <= 0 && Math.abs(ahead(g.x)) < 40);
+    const mineAhead = next?.kind === 'mine' && !next.armed && ahead(next.x) < SHOT.range;
+    const target = leaping || (!mineAhead && (
+      this.ground.some((g) => !g.dead && !g.behind && shootable.includes(g.kind) && ahead(g.x) > 0 && ahead(g.x) < SHOT.range * 0.8)
+      || this.air.some((a) => Math.abs(a.x - sx) < 30) || this.drops.some((d) => Math.abs(d.sx - sx) < 8)));
+    // Like a player: pre-fire at anything coming up while the cannon is cool, fire freely at what's in range.
+    const coming = this.ground.some((g) => !g.dead && g.kind !== 'beacon' && g.kind !== 'ice' && ahead(g.x) > 0 && ahead(g.x) < WIDTH - sx);
+    const fire = (target && this.heat < 0.7) || (!mineAhead && coming && this.heat < 0.3);
+    return { dir, jump, fire, confirm: false, back: false, mute: false, pause: false, device: 'kbm' };
   }
 
   // ---- Course ----
@@ -245,13 +270,17 @@ export class PatrolScene extends Phaser.Scene {
     this.itemIdx = 0;
     this.pendingDozers = [];
     this.pendingRollers = [];
+    this.pendingWaves = [];
     this.beaconsPassed = 0;
     this.respawnX = startX;
-    this.sectorTime = 0;
     this.backdrop.setLook(SECTORS[index].look, lap > 0 ? 'dusk' : 'day');
     this.music.play(lap > 0 ? 'dusk' : 'day');
-    const shift = lap > 0 ? `DUSK SHIFT${lap > 1 ? ` ${lap}` : ''}  ·  ` : '';
-    this.showBanner(`SECTOR ${index + 1}  ·  ${SECTORS[index].name}`, `${shift}PAR ${fmt(this.course.par)}`, 2600);
+    this.showBanner(`SECTOR ${index + 1}  ·  ${SECTORS[index].name}`, this.sectorSub(), 2600);
+  }
+
+  private sectorSub() {
+    const lap = this.course.lap;
+    return `${lap > 0 ? `DUSK SHIFT${lap > 1 ? ` ${lap}` : ''}  ·  ` : ''}${COURSE.beaconsPerSector} BEACONS`;
   }
 
   /** Puts course items on the road as they come within reach. */
@@ -272,6 +301,11 @@ export class PatrolScene extends Phaser.Scene {
       this.ground.push({ kind: 'roller', x: this.camX + WIDTH + 12, img: this.sprite('boulder', -50, 0), hp: 1, t: 0, lift: 0 });
       playSound(this, 'roll');
     }
+    // An air raid's waves come on cue, and hold off the random ones for a while.
+    while (this.pendingWaves.length && rx >= this.pendingWaves[0].x) {
+      this.spawnAir(this.pendingWaves.shift()!.air!);
+      this.airClock = Math.max(this.airClock, SECTORS[this.course.index].airEvery);
+    }
   }
 
   private spawnItem(item: CourseItem) {
@@ -280,6 +314,10 @@ export class PatrolScene extends Phaser.Scene {
     const add = (kind: Exclude<GroundThing['kind'], 'roller'>, extra: Partial<GroundThing> = {}) =>
       this.ground.push({ kind, x: item.x, img: this.sprite(kind, -50, 0), hp: 1, passed: behind, ...extra });
     if ((item.kind === 'dozer' || item.kind === 'roller') && item.x < this.roverX() + 60) return;
+    if (item.kind === 'wave') {
+      if (!behind) this.pendingWaves.push(item);
+      return;
+    }
     switch (item.kind) {
       case 'crater': this.craters.push({ x: item.x, w: item.w ?? 24, fresh: 0 }); break;
       case 'boulder': add('boulder'); break;
@@ -319,7 +357,6 @@ export class PatrolScene extends Phaser.Scene {
 
   private step(dt: number, input: ControlState) {
     this.clock += dt;
-    this.sectorTime += dt;
     const alive = this.deadFor <= 0;
     const target = !alive ? 0 : input.dir > 0 ? ROVER.maxSpeed : input.dir < 0 ? ROVER.minSpeed : ROVER.cruise;
     const accel = alive ? ROVER.accel : 140;
@@ -355,12 +392,26 @@ export class PatrolScene extends Phaser.Scene {
     this.landed = Math.max(0, this.landed - dt);
     if (this.deadFor <= 0 && this.roverY === 0 && Math.random() < this.speed / 300) this.burst(rx - 9, GROUND_Y - 2, DEBRIS.dust, 1);
 
-    // Fire: one press sends a forward shot (only one in flight) and an upward shot.
+    // Fire: one press sends a forward shot (only one in flight) and an upward shot, and heats the cannon.
     this.fireCool -= dt;
-    if (input.fire && this.fireCool <= 0 && this.deadFor <= 0) {
-      this.fireCool = SHOT.cooldown;
+    if (this.jam > 0) {
+      this.jam = Math.max(0, this.jam - dt);
+      this.heat = this.jam / HEAT.jamSec;
+      if (Math.random() < 0.3) this.burst(rx - 2, GROUND_Y - 14 - this.roverY, [0xffffff, 0xd8cfc8], 1);
+    } else this.heat = Math.max(0, this.heat - HEAT.coolPerSec * dt);
+    this.overdrive = Math.max(0, this.overdrive - dt);
+    const od = this.overdrive > 0;
+    if (input.fire && this.fireCool <= 0 && this.deadFor <= 0 && this.jam <= 0) {
+      this.fireCool = SHOT.cooldown * (od ? OVERDRIVE.cooldownScale : 1);
+      if (!od) this.heat += HEAT.perShot;
+      if (this.heat >= 1) {
+        this.heat = 1;
+        this.jam = HEAT.jamSec;
+        this.popup('OVERHEAT', rx, GROUND_Y - 30 - this.roverY, TEXT.ink);
+        playSound(this, 'overheat');
+      }
       const y = GROUND_Y - 7 - this.roverY;
-      if (!this.shots.length) this.shots.push({ x: rx + 9, px: rx + 9, y, start: rx + 9 });
+      if (this.shots.length < (od ? 2 : 1)) this.shots.push({ x: rx + 9, px: rx + 9, y, start: rx + 9 });
       if (this.ups.length < SHOT.maxUp) this.ups.push({ sx, y: GROUND_Y - 16 - this.roverY, py: GROUND_Y - 16 - this.roverY });
       playSound(this, 'shot');
     }
@@ -409,6 +460,7 @@ export class PatrolScene extends Phaser.Scene {
         g.img.rotation = -Math.floor((g.t! * roll) / 8 / (Math.PI / 2)) * (Math.PI / 2);
         g.lift = Math.abs(Math.sin(g.t! * Math.PI * r.hops)) * r.bounce;
       }
+      if (g.kind === 'mine' && g.armed) this.stepMine(g, dt, rx);
       if (g.kind === 'dozer') {
         g.x += (this.speed + (g.behind ? ENEMY.dozer.catchUp : ENEMY.dozer.ahead)) * dt;
         if (g.behind && g.x > rx + 12) {
@@ -432,9 +484,19 @@ export class PatrolScene extends Phaser.Scene {
         }
       }
       for (const g of this.ground) {
-        if (s.dead || g.dead || !['boulder', 'roller', 'harvester', 'dozer'].includes(g.kind) || g.behind) continue;
+        if (s.dead || g.dead || !['boulder', 'roller', 'harvester', 'dozer', 'mine'].includes(g.kind) || g.behind) continue;
         const half = 8 * g.img.scaleX;
         if (s.px <= g.x + half && s.x >= g.x - half) {
+          if (g.kind === 'mine') {
+            // A mine on the road arms; one in the air is shot down, if the shot is at its height.
+            const flying = (g.lift ?? 0) > 0;
+            if (flying ? Math.abs(s.y - (GROUND_Y - 6 - g.lift!)) < 7 : !g.armed) {
+              s.dead = true;
+              if (flying) this.defuseMine(g);
+              else this.armMine(g);
+            }
+            continue;
+          }
           s.dead = true;
           g.hp -= 1;
           g.flash = 0.12;
@@ -459,6 +521,65 @@ export class PatrolScene extends Phaser.Scene {
     this.fx.burst(g.x, GROUND_Y - 8, rock ? DEBRIS.rock : DEBRIS.machine, rock ? 'small' : 'big');
     const points = g.kind === 'boulder' ? POINTS.boulder.kill : g.kind === 'roller' ? POINTS.roller.kill : g.kind === 'harvester' ? POINTS.harvester.kill : POINTS.dozer.kill;
     this.addScore(points, g.x, GROUND_Y - 24);
+    playSound(this, 'boom');
+  }
+
+  /** A shot arms a mine: it beeps and blinks, then leaps at the rover. */
+  private armMine(g: GroundThing) {
+    g.armed = true;
+    g.fuse = ENEMY.mine.fuse;
+    g.lift = 0;
+    this.fx.hit(g.x, GROUND_Y - 6, COLORS.danger, 0);
+    playSound(this, 'arm');
+  }
+
+  /**
+   * An armed mine: the fuse burns, then it leaps to hang over where the rover will be and drops on it, keeping pace with
+   * the rover's speed at the leap (like the relay satellite). Up shots can hit it; on landing it blows up.
+   */
+  private stepMine(g: GroundThing, dt: number, rx: number) {
+    const m = ENEMY.mine;
+    if (g.fuse! > 0) {
+      g.fuse! -= dt;
+      if (g.fuse! > 0) return;
+      const rise = m.leap / m.gravity;
+      g.vx = (rx + this.speed * rise - g.x) / rise;
+      g.fallVx = this.speed;
+      g.vy = m.leap;
+      playSound(this, 'leap');
+    }
+    g.x += g.vx! * dt;
+    g.vy! -= m.gravity * dt;
+    if (g.vy! <= 0) g.vx = g.fallVx;
+    g.lift = Math.max(0, g.lift! + g.vy! * dt);
+    const sx = g.x - this.camX, y = GROUND_Y - 6 - g.lift;
+    for (const up of this.ups) {
+      if (up.dead || g.dead) continue;
+      if (Math.abs(up.sx - sx) < 7 && up.py >= y - 6 && up.y <= y + 6) {
+        up.dead = true;
+        this.defuseMine(g);
+      }
+    }
+    if (g.dead) return;
+    if (g.lift === 0) {
+      g.dead = true;
+      this.burst(g.x, GROUND_Y - 4, DEBRIS.charge, 22);
+      this.fx.burst(g.x, GROUND_Y - 4, DEBRIS.charge, 'big');
+      playSound(this, 'crater');
+      if (this.canBeHit() && Math.abs(g.x - rx) < m.blast && this.roverY < 10) this.crash();
+    } else if (this.canBeHit() && Math.abs(g.x - rx) < 8 && Math.abs(y - (GROUND_Y - 8 - this.roverY)) < 9) {
+      g.dead = true;
+      this.burst(g.x, y, DEBRIS.charge, 16);
+      this.crash();
+    }
+  }
+
+  private defuseMine(g: GroundThing) {
+    g.dead = true;
+    const y = GROUND_Y - 6 - (g.lift ?? 0);
+    this.burst(g.x, y, DEBRIS.charge, 18);
+    this.fx.burst(g.x, y, DEBRIS.charge, 'big');
+    this.addScore(POINTS.mine.defuse, g.x, y - 12);
     playSound(this, 'boom');
   }
 
@@ -589,7 +710,7 @@ export class PatrolScene extends Phaser.Scene {
       if (g.dead) continue;
       const big = g.kind === 'boulder' && g.big;
       const near = Math.abs(g.x - rx) < (big ? ENEMY.bigBoulder.reach : 11);
-      if (g.kind === 'mine' && near && y < 6) {
+      if (g.kind === 'mine' && !(g.lift ?? 0) && near && y < 6) {
         g.dead = true;
         this.burst(g.x, GROUND_Y - 4, DEBRIS.charge, 12);
         return this.crash();
@@ -604,7 +725,12 @@ export class PatrolScene extends Phaser.Scene {
         this.burst(g.x, GROUND_Y - 36, DEBRIS.ice, 14);
         this.fx.pop(g.x, GROUND_Y - 36, DEBRIS.ice, 14);
         this.addScore(POINTS.ice, g.x, GROUND_Y - 50);
+        // Coolant: the cannon vents, and overdrives for a few seconds.
+        this.heat = this.jam = 0;
+        this.overdrive = OVERDRIVE.secs;
+        this.popup('OVERDRIVE', g.x, GROUND_Y - 62, TEXT.tech);
         playSound(this, 'pickup');
+        playSound(this, 'vent');
       }
     }
     for (const s of this.shells) if (Math.abs(s.x - rx) < 9 && y < 8) { s.dead = true; return this.crash(); }
@@ -616,7 +742,7 @@ export class PatrolScene extends Phaser.Scene {
     for (const g of this.ground) {
       if (g.dead || g.passed || g.kind === 'dozer' || g.x > rx - (g.big ? ENEMY.bigBoulder.reach + 1 : 10)) continue;
       g.passed = true;
-      if (g.kind === 'mine') this.addScore(POINTS.mine.jump, g.x, GROUND_Y - 22);
+      if (g.kind === 'mine') { if (!g.armed) this.addScore(POINTS.mine.jump, g.x, GROUND_Y - 22); }
       else if (g.kind === 'boulder') this.addScore(POINTS.boulder.jump, g.x, GROUND_Y - 26);
       else if (g.kind === 'roller') this.addScore(POINTS.roller.jump, g.x, GROUND_Y - 26);
       else if (g.kind === 'harvester') this.addScore(POINTS.harvester.jump, g.x, GROUND_Y - 26);
@@ -628,29 +754,30 @@ export class PatrolScene extends Phaser.Scene {
   private passBeacon(x: number) {
     this.beaconsPassed += 1;
     this.respawnX = x;
-    const sector = this.course.index, t = Math.floor(this.sectorTime);
+    const sector = this.course.index;
     const final = this.beaconsPassed === COURSE.beaconsPerSector;
     this.fx.pop(x, GROUND_Y - 18, final ? [COLORS.tech, COLORS.gold] : [COLORS.tech], final ? 24 : 10);
     if (!final) {
       playSound(this, 'beacon');
-      this.showBanner(`BEACON ${sector + 1}-${this.beaconsPassed}`, `TIME ${fmt(t)}   PAR ${fmt(this.course.par)}`, 1800);
+      const left = COURSE.beaconsPerSector - this.beaconsPassed;
+      this.showBanner(`BEACON ${sector + 1}-${this.beaconsPassed}`, `${left} TO GO`, 1800);
       return;
     }
-    const bonus = SCORING.sectorBonus + SCORING.perSecondUnderPar * Math.max(0, this.course.par - t);
+    const bonus = SCORING.sectorBonus;
     this.addScore(bonus);
     this.music.duck(2400);
     playSound(this, 'sectorClear');
     const last = sector === SECTORS.length - 1;
     if (last) this.addScore(SCORING.routeBonus);
     const lap = last ? this.lap + 1 : this.lap;
-    const clearSub = `TIME ${fmt(t)}  PAR ${fmt(this.course.par)}  +${pts(bonus)}${last ? `  ROUTE +${pts(SCORING.routeBonus)}` : ''}`;
+    const clearSub = `+${pts(bonus)}${last ? `  ROUTE +${pts(SCORING.routeBonus)}` : ''}`;
     this.lap = lap;
     this.startSector(last ? 0 : sector + 1, lap, x);
     this.showBanner(`SECTOR ${sector + 1} CLEAR`, clearSub, 2600);
     this.time.delayedCall(2700, () => {
       if (this.over) return;
       const s = SECTORS[this.course.index];
-      this.showBanner(`SECTOR ${this.course.index + 1}  ·  ${s.name}`, `${this.lap > 0 ? 'DUSK SHIFT  ·  ' : ''}PAR ${fmt(this.course.par)}`, 2200);
+      this.showBanner(`SECTOR ${this.course.index + 1}  ·  ${s.name}`, this.sectorSub(), 2200);
     });
   }
 
@@ -669,6 +796,7 @@ export class PatrolScene extends Phaser.Scene {
     this.speed = ROVER.cruise;
     this.roverY = 0;
     this.roverVy = 0;
+    this.heat = this.jam = this.overdrive = 0;
     this.camX = this.respawnX - 40;
     this.invulnerable = ROVER.invulnerableMs / 1000;
     this.airClock = Math.max(this.airClock, 3);
@@ -678,6 +806,7 @@ export class PatrolScene extends Phaser.Scene {
     if (this.itemIdx < 0) this.itemIdx = items.length;
     this.pendingDozers = [];
     this.pendingRollers = [];
+    this.pendingWaves = [];
     this.showBanner(`${this.lives} ROVER${this.lives === 1 ? '' : 'S'} LEFT`, this.beaconsPassed ? `FROM BEACON ${this.course.index + 1}-${this.beaconsPassed}` : 'FROM THE SECTOR START', 1400);
   }
 
@@ -716,6 +845,7 @@ export class PatrolScene extends Phaser.Scene {
     this.lives = ROVER.lives;
     this.speed = ROVER.cruise;
     this.roverY = 0;
+    this.heat = this.jam = this.overdrive = 0;
     this.camX = this.course.startX - 40;
     this.invulnerable = ROVER.invulnerableMs / 1000;
     this.airClock = 4;
@@ -732,17 +862,20 @@ export class PatrolScene extends Phaser.Scene {
     this.scene.start('title');
   }
 
+  /** The speed multiplier: braking, cruising or boosting. */
+  private multiplier() {
+    const m = MULTIPLIER;
+    return this.speed < ROVER.cruise - m.band ? m.brake : this.speed > ROVER.cruise + m.band ? m.boost : m.cruise;
+  }
+
+  /** Points for something on the road or in the sky (with a place for the popup) are multiplied by speed; bonuses aren't. */
   private addScore(points: number, wx?: number, y?: number) {
-    this.score += points;
     if (wx !== undefined && y !== undefined) {
-      const text = this.add.text(wx - this.camX, y, `+${points}`, { fontFamily: FONT, fontSize: '8px', color: TEXT.ink }).setOrigin(0.5).setDepth(15);
-      const popup = { text, x: wx };
-      this.popups.push(popup);
-      this.tweens.add({
-        targets: text, y: y - 14, alpha: 0, duration: 900, ease: 'Quad.out',
-        onComplete: () => { text.destroy(); this.popups = this.popups.filter((p) => p !== popup); },
-      });
+      const m = this.multiplier();
+      points *= m;
+      this.popup(`+${points}`, wx, y, m === MULTIPLIER.boost ? TEXT.gold : TEXT.ink);
     }
+    this.score += points;
     const at = SCORING.extraRoversAt;
     while (this.extraIdx < at.length && this.score >= at[this.extraIdx]) {
       this.extraIdx += 1;
@@ -751,6 +884,17 @@ export class PatrolScene extends Phaser.Scene {
       playSound(this, 'extraRover');
       this.showBanner('EXTRA ROVER', `${this.lives} ROVERS`, 1600);
     }
+  }
+
+  /** Text that rises and fades at world x. */
+  private popup(str: string, wx: number, y: number, color: string = TEXT.ink) {
+    const text = this.add.text(wx - this.camX, y, str, { fontFamily: FONT, fontSize: '8px', color }).setOrigin(0.5).setDepth(15);
+    const popup = { text, x: wx };
+    this.popups.push(popup);
+    this.tweens.add({
+      targets: text, y: y - 14, alpha: 0, duration: 900, ease: 'Quad.out',
+      onComplete: () => { text.destroy(); this.popups = this.popups.filter((p) => p !== popup); },
+    });
   }
 
   private showBanner(title: string, sub: string, ms: number) {
@@ -763,7 +907,7 @@ export class PatrolScene extends Phaser.Scene {
     const ahead = this.camX + WIDTH;
     return {
       air: this.air.length > 0 || this.airClock < 1.2,
-      mine: this.ground.some((g) => g.kind === 'mine' && g.x > ahead - 40),
+      mine: this.ground.some((g) => g.kind === 'mine' && (g.armed || g.x > ahead - 40)),
       rear: this.ground.some((g) => g.kind === 'dozer' && g.behind) || this.pendingDozers.some((x) => x - 60 - this.roverX() < ROVER.cruise),
     };
   }
@@ -813,17 +957,19 @@ export class PatrolScene extends Phaser.Scene {
         g.fillStyle(COLORS.gold).fillRect(Math.round(d.sx) - 1, Math.round(d.y) - 1, 2, 2);
       } else g.fillStyle(COLORS.tech).fillRect(Math.round(d.sx), Math.round(d.y), 2, 3);
     }
+    const shotColor = this.overdrive > 0 ? COLORS.tech : COLORS.shot;
     for (const s of this.shots) {
-      g.fillStyle(COLORS.shot).fillRect(Math.round(s.x - camX) - 3, Math.round(s.y), 5, 2);
+      g.fillStyle(shotColor).fillRect(Math.round(s.x - camX) - 3, Math.round(s.y), 5, 2);
       g.fillStyle(COLORS.rust).fillRect(Math.round(s.x - camX) - 6, Math.round(s.y), 3, 2);
     }
-    g.fillStyle(COLORS.shot);
+    g.fillStyle(shotColor);
     for (const u of this.ups) g.fillRect(Math.round(u.sx), Math.round(u.y), 2, 5);
     for (const t of this.ground) {
       const x = t.x - camX;
       if (t.kind === 'ice') t.img.setPosition(x, GROUND_Y - 36 + Math.sin(this.clock * 3 + t.x) * 1.5);
       else t.img.setPosition(x, GROUND_Y - (t.kind === 'mine' ? 6 : 8 * t.img.scaleY) - (t.lift ?? 0));
-      if (t.flash) t.img.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
+      const blink = t.armed && Math.sin(this.clock * (t.fuse! > 0 ? 50 : 25)) > 0;
+      if (t.flash || blink) t.img.setTint(blink ? COLORS.danger : 0xffffff).setTintMode(Phaser.TintModes.FILL);
       else t.img.clearTint().setTintMode(Phaser.TintModes.MULTIPLY);
       if (t.kind === 'beacon' && Math.sin(this.clock * 6) > 0) g.fillStyle(COLORS.tech).fillRect(Math.round(x) - 1, GROUND_Y - 19, 2, 2);
     }
@@ -836,21 +982,33 @@ export class PatrolScene extends Phaser.Scene {
     }
     // Soft halos under the bright things: shots, shells, falling drops, ice cores, beacon lights and fresh craters.
     const fx = this.fx;
-    for (const s of this.shots) fx.glow(s.x - camX, s.y + 1, 7, COLORS.shot);
-    for (const u of this.ups) fx.glow(u.sx + 1, u.y + 2, 6, COLORS.shot);
+    for (const s of this.shots) fx.glow(s.x - camX, s.y + 1, 7, shotColor);
+    for (const u of this.ups) fx.glow(u.sx + 1, u.y + 2, 6, shotColor);
     for (const s of this.shells) fx.glow(s.x - camX, GROUND_Y - 5, 6, COLORS.tech);
     for (const d of this.drops) fx.glow(d.sx, d.y, d.kind === 'charge' ? 9 : 5, d.kind === 'charge' ? COLORS.danger : COLORS.tech);
     for (const c of this.craters) if (c.fresh > 0) fx.glow(c.x + c.w / 2 - camX, GROUND_Y + 9, c.w * 0.45, COLORS.rust, (c.fresh / 0.6) * 0.6);
     for (const t of this.ground) {
       if (t.kind === 'ice') fx.glow(t.x - camX, t.img.y, 13, COLORS.tech, 0.75 + 0.25 * Math.sin(this.clock * 4 + t.x));
+      if (t.armed) fx.glow(t.x - camX, t.img.y, 10, COLORS.danger, 0.8);
       if (t.kind === 'beacon' && Math.sin(this.clock * 6) > 0) fx.glow(t.x - camX, GROUND_Y - 18, 8, COLORS.tech);
     }
     for (const pop of this.popups) pop.text.x = pop.x - camX;
 
     const sx = this.roverSX();
+    // Heat gauge on the road under the rover: gold, red when nearly jammed, flashing while jammed. In overdrive it shows
+    // the time left, in the tech colour.
+    const level = this.overdrive > 0 ? this.overdrive / OVERDRIVE.secs : this.heat;
+    if (level > 0.01 && this.deadFor <= 0 && !this.over) {
+      const x = Math.round(sx) - 9;
+      const color = this.overdrive > 0 ? COLORS.tech : this.jam > 0 ? (Math.sin(this.clock * 30) > 0 ? COLORS.danger : COLORS.ink) : this.heat > 0.75 ? COLORS.danger : COLORS.gold;
+      g.fillStyle(COLORS.void, 0.7).fillRect(x, GROUND_Y + 3, 18, 4);
+      g.fillStyle(color).fillRect(x + 1, GROUND_Y + 4, Math.max(1, Math.round(16 * level)), 2);
+    }
     const blink = this.invulnerable > 0 && Math.sin(this.clock * 30) < 0;
     const bob = this.landed > 0 ? 1 : this.roverY === 0 && Math.sin(camX * 0.35) > 0.6 ? -1 : 0;
     this.rover.setVisible(this.deadFor <= 0 && !this.over && !blink).setPosition(sx, GROUND_Y - 8 - this.roverY + bob);
+    if (this.heat > 0.8 || this.jam > 0) this.rover.setTint(0xffb0a0);
+    else this.rover.clearTint();
   }
 
   private writeHud(input: ControlState) {
@@ -860,7 +1018,7 @@ export class PatrolScene extends Phaser.Scene {
     const hud: HudState = {
       score: this.score, lives: this.lives, device: input.device, over: this.over,
       next: `${this.course.index + 1}-${Math.min(COURSE.beaconsPerSector, this.beaconsPassed + 1)}`,
-      time: this.sectorTime, par: this.course.par,
+      mult: this.multiplier(),
       lamps, progress: this.course.index * COURSE.beaconsPerSector + this.beaconsPassed + along,
       dusk: this.lap > 0, banner: this.banner,
       paused: this.paused, attract: this.demoSeed >= 0,

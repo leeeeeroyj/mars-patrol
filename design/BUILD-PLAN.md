@@ -5,7 +5,7 @@ Side-scrolling rover patrol re-imagined from Irem's *Moon Patrol* (1982). Concep
 ## Scope
 
 **v1**
-- One patrol route: 5 sectors × 5 beacons (Chryse Flats, Ares Vallis, Tharsis Rise, Noctis Labyrinth, Olympus Approach), then the same route at Dusk, harder each lap.
+- One patrol route: 5 sectors × 5 beacons (Chryse Flats, Ares Vallis, Tharsis Rise, Noctis Labyrinth, Olympus Approach), then the same route at Dusk, harder each lap. (Now 3 beacons a sector; see the risk and reward rebuild below.)
 - Rover: auto-scroll with brake/boost, jump, dual fire (forward + up).
 - Roster: survey drone, grader saucer (charges blast craters), relay satellite (diving arc), boulder (small and big), seed charge, harvester (shells cancel your shot), dozer (from behind), ice core, relay beacon.
 - Par-time sector bonus, route bonus, extra rovers at 10k / 30k / 60k, respawn at the last beacon, continue from the sector start with score reset.
@@ -34,7 +34,7 @@ Vite 8 + Phaser 4 + TypeScript, copied from Space Raider (`package.json`, `tscon
 
 The game camera doesn't scroll. The scene keeps `camX` (distance driven) and places world things at `x - camX`, which keeps the HUD, air enemies (screen space) and parallax simple.
 
-## Status (2026-11-21)
+## Status (2026-11-22)
 
 **v1 is complete.** All seven milestones are done, and the game is deployed to GitHub Pages from `leeeeeroyj/mars-patrol`.
 
@@ -74,7 +74,19 @@ The game camera doesn't scroll. The scene keeps `camX` (distance driven) and pla
 - **Layouts:** adding rollers changes the seeded layouts of sectors 3–5.
 - **Tests:** `pause-hi-test` 14/14, `attract-test` 14/14 (gameplay at 1.5 s). Run them one at a time: two headless Chromes at once starve each other and fail on timing.
 
-**Next (post-v1, pick any):** a high-score table, dust storms that cut visibility, a boss at Olympus, a separate music on/off. Bring the balance numbers above back in when real play shows a problem.
+**Risk and reward rebuild (2026-11-22)**
+
+Playtest: too easy, too basic, too long. Against `GAME-DESIGN-PHILOSOPHY.md` (§3 risk and reward): fire was free and holding it beat almost everything (the old pilot was "always fire"), mines were holes with different art, ice cores were points with no purpose, speed's only payoff was par ~70 s later, and 25 uniform stretches made about 6 minutes a lap.
+- **Heat** (`HEAT`): each trigger pull +0.22, cooling 0.45/s; at 1 the cannon jams for 1 s while the gauge drains. Holding fire jams in 2.1 s; tapping twice a second never does. The gauge sits on the road under the rover (the eyes are there, not on the top bar).
+- **Speed multiplier** (`MULTIPLIER`) replaces par and the sector clock: points from kills, jumps and pickups ×1 brake / ×2 cruise / ×3 boost (±8 px/s around cruise). The HUD shows SPEED x2. Flat sector bonus 1,000, route bonus 5,000. Extra rovers moved to 20k / 50k / 100k since scores roughly double.
+- **Mines bite back** (the user's idea; `ENEMY.mine`): a forward shot arms a mine (beeps, blinks, MINE lamp). After 0.4 s it leaps (260 px/s up, apex ~70 px), moving to hang over where the rover will be, then drops keeping pace with the rover's speed at the leap, like the relay satellite. Blast 12 px on landing. Simulated: doing nothing dies; braking or boosting at the leap lands it 15–29 px clear, and still works 0.35 s late; it hangs overhead for ~0.5 s to be shot down (300 × multiplier); jumping doesn't help. Untouched mines are jumped for 50 as before. An earlier straight ballistic arc was only over the rover in its last frames, so it couldn't be shot.
+- **Ice cores** (`OVERDRIVE`): vent all heat and give 3 s of overdrive (half cooldown, no heat, two forward shots in flight, tech-coloured shots and gauge). Placed over danger by the course generator: the second hazard of an intro, a mine pair's middle in a mine run, the last hazard of a gauntlet, where a dozer overtakes.
+- **Route:** 3 beacons a sector, 900 px each: 13,500 px, 3 minutes at cruise (was 27,500 and 6). Each stretch is a set piece (`Stretch`: intro, breather, gauntlet, mineRun, airRaid with two scripted `wave` items). Each sector `introduces` its new hazards and its intro shows only those: Chryse craters and boulders, Ares mines (moved earlier, since they're the wager), Tharsis rollers and big boulders, Noctis harvesters and dozers (harvesters moved from Ares), Olympus everything.
+- **Autopilot:** fires at targets in range while heat < 0.7, pre-fires at anything coming while heat < 0.3, never fires with an untouched mine next; crater jumps timed to the crater's width (it used to land in the far end of 34 px craters). Over 10 simulated 43 s demos it lost 6 rovers (to pellets, a diver and fresh charge craters) and shot down every mine it armed.
+- **Headless timing:** headless Chrome manages about 20 fps here, and Phaser steps a fixed 16.7 ms a frame, so game time runs at about a third of wall time. `tools/loop-test.mjs` waits in game seconds (`S.clock`). On a device that can't hold 60 fps the game slows rather than skipping frames.
+- **Tests:** `loop-test` 21/21, `attract-test` 14/14 (core verb at 2.3 s), `pause-hi-test` 14/14, one at a time.
+
+**Next (post-v1, pick any):** a boss at Olympus as the route's finale, a high-score table, dust storms that cut visibility, a separate music on/off. Bring the balance numbers above back in when real play shows a problem.
 
 ## Milestones
 
