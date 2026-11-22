@@ -52,7 +52,9 @@ export const SHOT = { forwardSpeed: 230, range: 150, cooldown: 0.24, upSpeed: 26
 /** Points: `jump` for clearing it, `kill` for shooting it. */
 export const POINTS = {
   scout: 100, bomber: 200, diver: 300,
-  boulder: { jump: 100, kill: 100, bigKill: 200 },
+  /** A big boulder: `chip` for the first hit, which breaks it down to a boulder, then a boulder's `kill`. */
+  boulder: { jump: 100, kill: 100, chip: 100 },
+  roller: { jump: 100, kill: 150 },
   mine: { jump: 50 },
   harvester: { jump: 100, kill: 300 },
   dozer: { jump: 100, kill: 200 },
@@ -71,9 +73,13 @@ export const ENEMY = {
   dozer: { catchUp: 70, ahead: 28 },
   /** Craters a charge blasts into the road. */
   chargeCrater: 16,
+  /** Big boulders are drawn at `bigScale` and hit within `reach` of the rover and below `height`; the first hit breaks one down to a boulder. */
+  bigBoulder: { bigScale: 1.5, reach: 12, height: 16 },
+  /** Rolling boulders roll in from the right at `speed` (ground px/s), hopping up to `bounce` px, `hops` times a second. */
+  roller: { speed: 40, bounce: 3, hops: 2.2 },
 };
 
-export type GroundKind = 'crater' | 'boulder' | 'bigBoulder' | 'mine' | 'mineField' | 'harvester' | 'dozer' | 'ice';
+export type GroundKind = 'crater' | 'boulder' | 'bigBoulder' | 'roller' | 'mine' | 'mineField' | 'harvester' | 'dozer' | 'ice';
 export type AirKind = 'scouts' | 'bomber' | 'diver';
 
 export interface Sector {
@@ -90,9 +96,9 @@ export interface Sector {
 export const SECTORS: Sector[] = [
   { name: 'CHRYSE FLATS', ground: { crater: 4, boulder: 3, ice: 1 }, air: ['scouts'], airEvery: 9, look: { far: 0, volcano: 0.3 } },
   { name: 'ARES VALLIS', ground: { crater: 4, boulder: 3, harvester: 2, ice: 1 }, air: ['scouts', 'bomber'], airEvery: 8, look: { far: 1, volcano: 0.2 } },
-  { name: 'THARSIS RISE', ground: { crater: 3, boulder: 2, bigBoulder: 2, mine: 2, mineField: 1, harvester: 1, ice: 1 }, air: ['scouts', 'bomber'], airEvery: 7.5, look: { far: 2, volcano: 0.6 } },
-  { name: 'NOCTIS LABYRINTH', ground: { crater: 3, boulder: 2, bigBoulder: 1, mine: 2, harvester: 2, dozer: 2, ice: 1 }, air: ['scouts', 'diver', 'bomber'], airEvery: 7, look: { far: 3, volcano: 0.4 } },
-  { name: 'OLYMPUS APPROACH', ground: { crater: 3, boulder: 2, bigBoulder: 2, mine: 2, mineField: 1, harvester: 2, dozer: 2, ice: 1 }, air: ['scouts', 'diver', 'bomber'], airEvery: 6, look: { far: 4, volcano: 1 } },
+  { name: 'THARSIS RISE', ground: { crater: 3, boulder: 2, bigBoulder: 2, roller: 2, mine: 2, mineField: 1, harvester: 1, ice: 1 }, air: ['scouts', 'bomber'], airEvery: 7.5, look: { far: 2, volcano: 0.6 } },
+  { name: 'NOCTIS LABYRINTH', ground: { crater: 3, boulder: 2, bigBoulder: 1, roller: 1, mine: 2, harvester: 2, dozer: 2, ice: 1 }, air: ['scouts', 'diver', 'bomber'], airEvery: 7, look: { far: 3, volcano: 0.4 } },
+  { name: 'OLYMPUS APPROACH', ground: { crater: 3, boulder: 2, bigBoulder: 2, roller: 2, mine: 2, mineField: 1, harvester: 2, dozer: 2, ice: 1 }, air: ['scouts', 'diver', 'bomber'], airEvery: 6, look: { far: 4, volcano: 1 } },
 ];
 
 export const COURSE = {

@@ -2,7 +2,7 @@ import { COURSE, SECTORS, type GroundKind } from './config';
 
 export type ItemKind = Exclude<GroundKind, 'mineField'> | 'beacon';
 
-/** One thing on the road, at world x. A dozer's x is where it overtakes the rover. */
+/** One thing on the road, at world x. A dozer's x is where it overtakes the rover; a roller's, where it meets the rover. */
 export interface CourseItem {
   kind: ItemKind;
   x: number;
@@ -43,7 +43,7 @@ function weighted<T extends string>(weights: Partial<Record<T, number>>, r: numb
 }
 
 /** How much road a hazard takes up, so the next one isn't placed on top of it. */
-const LENGTH: Record<GroundKind, number> = { crater: 34, boulder: 16, bigBoulder: 16, mine: 16, mineField: COURSE.mineFieldGap + 16, harvester: 16, dozer: 0, ice: 0 };
+const LENGTH: Record<GroundKind, number> = { crater: 34, boulder: 16, bigBoulder: 24, roller: 16, mine: 16, mineField: COURSE.mineFieldGap + 16, harvester: 16, dozer: 0, ice: 0 };
 
 /**
  * Lays out one sector: five stretches of road, each ending at a beacon. Each stretch starts and ends with clear road,

@@ -29,6 +29,8 @@ export const SOUNDS = {
   jump: { wave: 'square', freq: 220, slide: 2.2, sustain: 0.08, decay: 0.08, duty: 0.25, volume: 0.22 },
   land: { wave: 'noise', freq: 600, slide: -2, sustain: 0.02, decay: 0.08, smooth: 0.3, volume: 0.3 },
   boom: { wave: 'noise', freq: 1400, slide: -2.5, sustain: 0.04, decay: 0.32, volume: 0.55 },
+  crack: { wave: 'noise', freq: 700, slide: -2, sustain: 0.03, decay: 0.2, smooth: 0.6, volume: 0.45 },
+  roll: { wave: 'noise', freq: 160, slide: -0.4, attack: 0.15, sustain: 0.3, decay: 0.45, smooth: 0.35, volume: 0.4 },
   crater: { wave: 'noise', freq: 900, slide: -1.6, sustain: 0.08, decay: 0.5, volume: 0.6 },
   die: { wave: 'noise', freq: 1100, slide: -1.2, sustain: 0.15, decay: 0.9, volume: 0.8 },
   cancel: { wave: 'square', freq: 1500, slide: -4, sustain: 0.02, decay: 0.1, duty: 0.4, volume: 0.25 },

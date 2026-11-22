@@ -13,7 +13,7 @@ Side-scrolling rover patrol re-imagined from Irem's *Moon Patrol* (1982). Concep
 - Keyboard + mouse, controller, touch. Procedural sound. Deployed to GitHub Pages.
 
 **Later**
-- High-score table, rolling boulders, dust storms that cut visibility, a boss at Olympus, music.
+- High-score table, dust storms that cut visibility, a boss at Olympus. (Rolling boulders and music are done.)
 
 ## Architecture
 
@@ -34,7 +34,7 @@ Vite 8 + Phaser 4 + TypeScript, copied from Space Raider (`package.json`, `tscon
 
 The game camera doesn't scroll. The scene keeps `camX` (distance driven) and places world things at `x - camX`, which keeps the HUD, air enemies (screen space) and parallax simple.
 
-## Status (2026-11-16)
+## Status (2026-11-21)
 
 **v1 is complete.** All seven milestones are done, and the game is deployed to GitHub Pages from `leeeeeroyj/mars-patrol`.
 
@@ -65,7 +65,16 @@ The game camera doesn't scroll. The scene keeps `camX` (distance driven) and pla
 - **Attract mode:** `?attract` (`src/attract.ts`) skips the title and runs `PatrolScene` with `pilot()`, the concept sheet's autopilot (always firing; jumps craters, mines, unfinished big boulders, harvesters, shells and dozers; boosts out from under a diver). The seed picks the sector and day or dusk, and seeds air spawns. Game over or 45 s starts the next demo (the next seed). No input plugins, no audio context, no storage writes; the HUD drops the hint, PAUSE, SOUND and game-over prompts. Scene event listeners are now removed on shutdown, since attract restarts the scene.
 - **Tests:** `tools/cdp.mjs` (from Pro Racer Z). `tools/pause-hi-test.mjs` 14/14. `tools/attract-test.mjs` 14/14: gameplay at 1.3 s, shooting at 2.3 s, a new demo with no input, no sound, no AudioContext, keys / click / a fake gamepad change nothing, no storage writes, heap +1.4 %, full game area at 320 × 176 and 832 × 456. Over four 45 s demos the pilot lost one rover each and scored 1,300–3,850.
 
-**Next (post-v1, pick any):** a high-score table, rolling boulders, dust storms that cut visibility, a boss at Olympus, music. Bring the balance numbers above back in when real play shows a problem.
+**Music, backdrop, rolling and big boulders (2026-11-21)**
+- **Music:** `src/music.ts`. Two original loops written as notes (chords, an eighth-note lead, bass, drum and arpeggio patterns) and rendered at load into 22,050 Hz buffers, like the sound effects: Day (132 bpm, D, 16 bars, 29 s) and Dusk (108 bpm, A minor, 36 s). One track plays at a time: Day on Day laps, Dusk on Dusk laps. It pauses with the patrol, dips under the sector-clear and extra-rover jingles, stops at game over and restarts on continue. M / SOUND mutes it with everything else. No music in attract mode (no audio context).
+- **Backdrop:** a pale distant range behind the volcano; hills lit on the sun side with a bright crest and hazed at the foot; layered strata on the ridges; loose rocks with lit edges on the near layer; wispy ice clouds drifting over the sun. Per frame: dust devils on the plain (day), meteors and Earth as the evening star (dusk). A redraw (sector change) takes about 10 ms in headless Chrome, up from about 3.
+- **Rolling boulders** (`roller`, from Tharsis Rise): a course item whose x is where it meets the rover; it rolls in from the right edge at 40 px/s (× the Dusk speed-up), turning in quarter turns and hopping up to 3 px. Jump 100, shot 150. The autopilot jumps them.
+- **Big boulders** are drawn at 1.5× with a hitbox of 12 / 16 (reach / height). The first hit breaks one down to a boulder (+100, chunks, crack sound); the next destroys it (+100). Jump windows (simulated): cruise 0.17 s, boost 0.25 s, brake none (shoot it), against 0.25 / 0.33 / 0.08 s for a boulder. Their road length is 24.
+- **Fresh charge craters** are dark at once; the floor glows and cools instead of the whole bowl starting light.
+- **Layouts:** adding rollers changes the seeded layouts of sectors 3–5.
+- **Tests:** `pause-hi-test` 14/14, `attract-test` 14/14 (gameplay at 1.5 s). Run them one at a time: two headless Chromes at once starve each other and fail on timing.
+
+**Next (post-v1, pick any):** a high-score table, dust storms that cut visibility, a boss at Olympus, a separate music on/off. Bring the balance numbers above back in when real play shows a problem.
 
 ## Milestones
 

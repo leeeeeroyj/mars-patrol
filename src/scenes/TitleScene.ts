@@ -4,6 +4,7 @@ import { Backdrop } from '../backdrop';
 import { ATTRACT, attractSeed } from '../attract';
 import { Controls } from '../controls';
 import { loadHi } from '../hi';
+import { registerMusic } from '../music';
 import { playSound, registerSounds, restoreMute, toggleMute } from '../sfx';
 import { fitCamera } from '../view';
 
@@ -35,6 +36,7 @@ export class TitleScene extends Phaser.Scene {
     this.controls = new Controls(this);
     fitCamera(this, RENDER_SCALE);
     registerSounds(this);
+    registerMusic(this);
     restoreMute(this);
     this.cameras.main.fadeIn(250);
     this.backdrop = new Backdrop(this, 0);

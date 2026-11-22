@@ -25,7 +25,8 @@ Mars Patrol is an original arcade game inspired by the mechanics of Irem's arcad
 - **Five sectors, 25 beacons.** New hazards join as you go, and the hills and the volcano on the skyline change as you go. Finish the route and it starts over on the Dusk shift, faster and more crowded.
 - **Two guns at once.** Every shot fires forward along the road and straight up into the sky, so you're always watching both.
 - **A road you can learn.** Each sector is laid out from a fixed seed, so a retry gives you the same road. Every Dusk lap lays the route out afresh.
-- **Effects and sound, all in code.** Spark bursts, shockwave rings and screen shake on every kill, and a flash and camera roll when you lose a rover. Every sound effect is generated in code, sfxr style, when the game loads.
+- **Effects, sound and music, all in code.** Spark bursts, shockwave rings and screen shake on every kill, and a flash and camera roll when you lose a rover. Every sound effect and both music loops (one for the Day shift, one for Dusk) are generated in code when the game loads.
+- **A living skyline.** Dust devils wander the plain by day, ice clouds drift overhead, and at Dusk meteors streak down and Earth shows as the evening star.
 - **Plays anywhere.** Keyboard and mouse, an Xbox-style controller, or touch on a phone held sideways.
 
 ## How to play
@@ -44,7 +45,8 @@ The rover drives itself. Brake or boost to set its speed, jump over what's on th
 | --- | ---: | ---: | --- |
 | Crater | – | – | Can't be shot. Jump it. |
 | Boulder | 100 | 100 | Jump it or blast it. |
-| Big boulder | 100 | 200 | Takes two hits. |
+| Big boulder | 100 | 100 + 100 | Half again as big, and hard to jump unless you're boosting. The first hit breaks it down to a boulder. |
+| Rolling boulder | 100 | 150 | Rolls at you from up ahead, bouncing. Jump it or blast it. From Tharsis Rise on. |
 | Seed charge | 50 | – | Buried in the road, sometimes in pairs with room to land between them. Can't be shot. Jump it. |
 | Harvester | 100 | 300 | Crawls toward you, firing shells along the road. A shell cancels your forward shot. |
 | Dozer | 100 | 200 | Comes up from behind. Jump it as it passes, or shoot it once it's ahead. |
@@ -66,7 +68,7 @@ Your upward shots also destroy falling pellets and charges.
 | Jump | ↑, W, Space or right click | A | **JUMP** |
 | Fire | Z, J, X or left click | X, RT or RB | **FIRE** |
 | Pause | P or Esc | Start | Tap **II PAUSE** (bottom right) |
-| Sound on / off | M | Y | Tap **SOUND** (bottom right) |
+| Sound and music on / off | M | Y | Tap **SOUND** (bottom right) |
 | After game over | Enter to continue, Esc for the title | A to continue, B for the title | **CONTINUE** or **TITLE** |
 
 The patrol pauses itself if you switch away. From the pause panel, resume, or go back to the title. Hold jump to keep jumping. On a phone, turn the screen sideways. On wide screens the touch buttons sit in the empty space beside the game, so they don't cover the road.
@@ -95,6 +97,7 @@ src/
   touch.ts           on-screen touch buttons
   effects.ts         spark bursts, shockwave rings, glows, screen shake
   sfx.ts             procedural sound effects
+  music.ts           the Day and Dusk music loops, written out as notes and rendered in code
   hi.ts              the high score, kept in localStorage
   attract.ts         the ?attract demo mode's settings
   scenes/            title screen, patrol and HUD
